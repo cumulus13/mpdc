@@ -11,6 +11,28 @@ import time
 import cmdw3
 from make_colors import make_colors
 
+def makeList(alist, ncols, vertically=True, file=None):
+    from distutils.version import StrictVersion # pep 386
+    import prettytable as ptt # pip install prettytable
+    import sys
+    assert StrictVersion(ptt.__version__) >= StrictVersion('0.7') # for PrettyTable.vrules property        
+    L = alist
+    nrows = - ((-len(L)) // ncols)
+    ncols = - ((-len(L)) // nrows)
+    t = ptt.PrettyTable([str(x) for x in range(ncols)])
+    t.header = False
+    t.align = 'l'
+    t.hrules = ptt.NONE
+    t.vrules = ptt.NONE
+    r = nrows if vertically else ncols
+    chunks = [L[i:i+r] for i in range(0, len(L), r)]
+    chunks[-1].extend('' for i in range(r - len(chunks[-1])))
+    if vertically:
+        chunks = zip(*chunks)
+    for c in chunks:
+        t.add_row(c)
+    print(t)
+
 def conn0(host="192.168.43.1", port=6600, playlist="radio", columns=200):
      global mpd_client
      global mpd_host
@@ -106,6 +128,11 @@ def command_execute(commands, host=None):
 			if 'find' in commands:
 				x = organizer_album_by_artist(x)
 				navigator_find(x, host)
+			elif 'list' in commands:
+				x2 = []
+				for i in x:
+					x2.append(str(x.index(i)) + ". " + i)
+				makeList(x2, 10,)
 			else:
 				print(x)
 		print("#"*cmdw3.getWidth())
@@ -121,10 +148,12 @@ def execute(host=None, commands=None):
 		q = input('FUNCTION: ')
 	else:
 		q = commands
-	
+	if isinstance(q, list):
+		q = " ".join(q)
+	# print("COMMAND XXX =", q)
 	if "#" in q:
 		list_command = str(q).strip().split("#")
-		print("list_command =", list_command)
+		# print("list_command =", list_command)
 		for i in list_command:
 			command_execute(str(i).strip(), host)
 	else:
