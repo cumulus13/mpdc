@@ -11,6 +11,7 @@ import time
 import cmdw3
 from debug import debug
 from make_colors import make_colors
+import re
 
 def makeList(alist, ncols, vertically=True, file=None):
     from distutils.version import StrictVersion # pep 386
@@ -117,19 +118,45 @@ def organizer_album_by_artist(results):
 		n+=1
 	return album_paths
 
-def navigator_find(x, host=None):
+def navigator_find(x, host=None, clear=True):
+	play_root=False
+	def executor(q):
+		# print ("play_root =", play_root)
+		if str(q).isdigit():
+			if not int(q) > len(x.keys()):
+				if play_root:
+					path = os.path.dirname(x.get(int(q)).get('path'))
+					debug(path=path)
+					# print ("path 0 =",path)
+					command_execute('add %s'%(path))
+				else:
+					path = x.get(int(q)).get('path')
+					debug(path=path)
+					# print ("path 1 =",path)
+					command_execute('add %s'%(path))
+				command_execute('play') 
 	for i in x:
 		print(str(i) + ". " + "Album: " + make_colors(x.get(i).get('album'), 'white', 'blue'))
 		print(" "*len(str(i)) + "  " + "Path : " + make_colors(x.get(i).get('path'), 'white', 'magenta'))
 		print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
 	q = input('Play Album [number]: ')
 	if q:
-		if str(q).isdigit():
-			if not int(q) > len(x.keys()):
-				command_execute('clear', host)
-				command_execute('add %s'%(x.get(int(q)).get('path')))
-				command_execute('play') 
-
+		if clear:
+			command_execute('clear', host)
+		if "," in q or " " in q or "|" in q or ";" in q:
+			q1 = re.split(",| |;|\|", q)
+			debug(q1=q1)
+			# print("q1 =", q1)
+			q2 = []
+			for i in q1:
+				if not str(i).strip() == '':
+					q2.append(i)
+				if str(i).strip() == '-1':
+					play_root=True
+			for i in q2:
+				executor(i)
+		else:
+			executor(q)
 
 def command_execute(commands, host=None):
 	x_find = False
@@ -180,12 +207,12 @@ def command_execute(commands, host=None):
 				makeList(x2, 10,)
 			else:
 				print(x)
-		print("#"*cmdw3.getWidth())
+		# print("#"*cmdw3.getWidth())
 	else:
 		x = getattr(CLIENT, commands[0])()
 		if x:
 			print(x)
-		print("#"*cmdw3.getWidth())
+		# print("#"*cmdw3.getWidth())
 
 def execute(host=None, commands=None):
 	debug(commands=commands)
