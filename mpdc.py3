@@ -9,6 +9,7 @@ PORT = 6600
 CLIENT = ''
 import time
 import cmdw3
+from debug import debug
 from make_colors import make_colors
 
 def makeList(alist, ncols, vertically=True, file=None):
@@ -61,6 +62,8 @@ def conn(host=None, port=6600):
 				PORT = port
 			# print("HOST =", HOST)
 			# print("PORT =", PORT)
+			debug(HOST=HOST)
+			debug(PORT=PORT)
 			mpd_client.connect(host=HOST, port=PORT)
 			break
 		except:
@@ -70,26 +73,47 @@ def conn(host=None, port=6600):
 	return mpd_client
 
 def organizer_album_by_artist(results):
+	# print ("results =", results[1])
 	albums = []
 	#paths = []
 	album_paths = {}
 	n = 1
 	for i in results:
-		albums.append(i.get('album'))
+		# print ("i =",i)
+		if isinstance(i, list):
+			for x in i:
+				albums.append(x.get('album'))
+		else:		
+			albums.append(i.get('album'))
 		#paths.append(os.path.dirname(i.get(file)))
 	album = set(albums)
+	# print("album =", album)
 	for i in album:
 		for x in results:
-			if x.get('album') == i:
-				album_paths.update(
-					{
-						n: {
-							'album':i,
-							'path':os.path.dirname(x.get('file')),
+			if isinstance(x, list):
+				for y in x:
+					if y.get('album') == i:
+						album_paths.update(
+							{
+								n: {
+									'album':i,
+									'path':os.path.dirname(y.get('file')),
+								}
+							}
+						)
+						# n+=1
+						break		
+			else:
+				if x.get('album') == i:
+					album_paths.update(
+						{
+							n: {
+								'album':i,
+								'path':os.path.dirname(x.get('file')),
+							}
 						}
-					}
-				)
-				break
+					)
+					break
 		n+=1
 	return album_paths
 
@@ -108,10 +132,13 @@ def navigator_find(x, host=None):
 
 
 def command_execute(commands, host=None):
+	x_find = False
+	# debug('commands_execute')
 	if isinstance(commands, list):
 		commands = " ".join(commands)
 	CLIENT = conn(host)
-	# print("commands =", commands)
+	# debug('commands_execute', "CLIENT")
+	debug(commands=commands)
 	if 'album' in commands or 'find' in commands:
 		commands = str(commands).strip().split(' ', 2)
 	elif 'add' in commands:
@@ -123,7 +150,25 @@ def command_execute(commands, host=None):
 	if len(commands) > 1:
 		args = tuple(commands[1:])
 		# print("ARGS =", args)
-		x = getattr(CLIENT, commands[0])(*args)
+		if 'album' in commands and 'find' in commands:
+			x = getattr(CLIENT, commands[0])(*args)
+			if not x:
+				debug("not x")
+				x = getattr(CLIENT, 'list')('album')
+				debug(len_x = len(x))
+				debug(commands_index_album_add = commands[commands.index('album') + 1].lower())
+				x_find_album = []
+				for i in x:
+					if commands[commands.index('album') + 1].lower() in str(i).lower():
+						x1 = getattr(CLIENT, 'find')('album', i)
+						x_find_album.append(x1)
+				x = x_find_album
+				x_find = True
+		else:
+			x = getattr(CLIENT, commands[0])(*args)
+		# if x_find:
+		# 	x = organizer_album_by_artist(x)
+		# else:
 		if x:
 			if 'find' in commands:
 				x = organizer_album_by_artist(x)
@@ -143,17 +188,17 @@ def command_execute(commands, host=None):
 		print("#"*cmdw3.getWidth())
 
 def execute(host=None, commands=None):
-	# print("commands =", commands)
+	debug(commands=commands)
 	if not commands:
 		q = input('FUNCTION: ')
 	else:
 		q = commands
 	if isinstance(q, list):
 		q = " ".join(q)
-	# print("COMMAND XXX =", q)
+	debug(commands_q=q)
 	if "#" in q:
 		list_command = str(q).strip().split("#")
-		# print("list_command =", list_command)
+		debug(list_command=list_command)
 		for i in list_command:
 			command_execute(str(i).strip(), host)
 	else:
