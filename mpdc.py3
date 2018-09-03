@@ -120,6 +120,7 @@ def organizer_album_by_artist(results):
 
 def navigator_find(x, host=None, clear=True):
 	play_root=False
+	multiplay=False
 	def executor(q):
 		# print ("play_root =", play_root)
 		if str(q).isdigit():
@@ -134,7 +135,8 @@ def navigator_find(x, host=None, clear=True):
 					debug(path=path)
 					# print ("path 1 =",path)
 					command_execute('add %s'%(path))
-				command_execute('play') 
+				if not multiplay:
+					command_execute('play') 
 	for i in x:
 		print(str(i) + ". " + "Album: " + make_colors(x.get(i).get('album'), 'white', 'blue'))
 		print(" "*len(str(i)) + "  " + "Path : " + make_colors(x.get(i).get('path'), 'white', 'magenta'))
@@ -144,6 +146,7 @@ def navigator_find(x, host=None, clear=True):
 		if clear:
 			command_execute('clear', host)
 		if "," in q or " " in q or "|" in q or ";" in q:
+			multiplay=True
 			q1 = re.split(",| |;|\|", q)
 			debug(q1=q1)
 			# print("q1 =", q1)
@@ -155,10 +158,13 @@ def navigator_find(x, host=None, clear=True):
 					play_root=True
 			for i in q2:
 				executor(i)
+			if multiplay:
+				command_execute('play')
 		else:
 			executor(q)
 
 def command_execute(commands, host=None):
+	n_list = 10
 	x_find = False
 	# debug('commands_execute')
 	if isinstance(commands, list):
@@ -173,6 +179,10 @@ def command_execute(commands, host=None):
 	else:
 		commands = str(commands).strip().split(' ')
 	# print("commands tuple =", (tuple(commands[1:])))
+	for i in commands:
+		if i[0] == 'N' and i[1].isdigit():
+			n_list = int(i[1:])
+			commands.remove(i)
 	print("COMMAND :", " ".join(commands))
 	if len(commands) > 1:
 		args = tuple(commands[1:])
@@ -204,7 +214,7 @@ def command_execute(commands, host=None):
 				x2 = []
 				for i in x:
 					x2.append(str(x.index(i)) + ". " + i)
-				makeList(x2, 10,)
+				makeList(x2, n_list)
 			else:
 				print(x)
 		# print("#"*cmdw3.getWidth())
