@@ -96,11 +96,11 @@ def organizer_album_by_artist(results):
                     if y.get('album') == i:
                         album_paths.update(
                             {
-                                                        n: {
-                                                                'album':i,
-                                                                    'path':os.path.dirname(y.get('file')),
-                                                            }
-                                                    }
+                                n: {
+                                        'album':i,
+                                            'path':os.path.dirname(y.get('file')),
+                                    }
+                            }
                         )
                         # n+=1
                         break		
@@ -108,17 +108,19 @@ def organizer_album_by_artist(results):
                 if x.get('album') == i:
                     album_paths.update(
                         {
-                                                n: {
-                                                        'album':i,
-                                                            'path':os.path.dirname(x.get('file')),
-                                                    }
-                                            }
+                            n: {
+                                    'album':i,
+                                        'path':os.path.dirname(x.get('file')),
+                                }
+                        }
                     )
                     break
         n+=1
+    # print ("album_paths =", album_paths)
     return album_paths
 
 def navigator_find(x, host=None, clear=True):
+    # print ("x =", x)
     play_root=False
     multiplay=False
     def executor(q):
@@ -166,7 +168,7 @@ def navigator_find(x, host=None, clear=True):
 def command_execute(commands, host=None):
     n_list = 10
     x_find = False
-    # debug('commands_execute')
+    #debug('commands_execute')
     if isinstance(commands, list):
         commands = " ".join(commands)
     CLIENT = conn(host)
@@ -201,6 +203,36 @@ def command_execute(commands, host=None):
                         x_find_album.append(x1)
                 x = x_find_album
                 x_find = True
+        elif 'artist' in commands and 'find' in commands:
+            x = getattr(CLIENT, commands[0])(*args)
+            if not x:
+                debug("not x")
+                x = getattr(CLIENT, 'list')('artist')
+                # print ("XXX =", x)
+                debug(len_x = len(x))
+                debug(commands_index_album_add = commands[commands.index('artist') + 1].lower())
+                x_find_artist = []
+                for i in x:
+                    if commands[commands.index('artist') + 1].lower() in str(i).lower():
+                        x1 = getattr(CLIENT, 'find')('artist', i)
+                        x_find_artist.append(x1)
+                x = x_find_artist
+                # print ("XXX =", x)
+                x_find = True
+        elif 'playlist' in commands:
+            x = getattr(CLIENT, commands[0])()
+            len_x = len(x)
+            n = 1
+            for i in x:
+                if len(str(n)) == 1 and len(str(len_x)) == 2:
+                    n = "0" + str(n)
+                elif len(str(n)) == 1 and len(str(len_x)) == 3:
+                    n = "00" + str(n)                                
+                elif len(str(n)) == 2 and len(str(len_x)) == 3:
+                    n = "0" + str(n)                                
+                print (str(n) + ". " + i)
+                n = int(n)
+                n += 1
         else:
             x = getattr(CLIENT, commands[0])(*args)
         # if x_find:
@@ -219,10 +251,25 @@ def command_execute(commands, host=None):
                 print(x)
         # print("#"*cmdw3.getWidth())
     else:
-        x = getattr(CLIENT, commands[0])()
-        if x:
-            print(x)
-        # print("#"*cmdw3.getWidth())
+        if 'playlist' in commands:
+            x = getattr(CLIENT, commands[0])()
+            len_x = len(x)
+            n = 1
+            for i in x:
+                if len(str(n)) == 1:
+                    n = "0" + str(n)
+                elif len(str(n)) == 1 and len(str(len_x)) == 3:
+                    n = "00" + str(n)                                
+                elif len(str(n)) == 2 and len(str(len_x)) == 3:
+                    n = "0" + str(n)                                                
+                print (str(n) + ". " + i)
+                n = int(n)
+                n += 1
+        else:
+            x = getattr(CLIENT, commands[0])()
+            if x:
+                print(x)
+            # print("#"*cmdw3.getWidth())
 
 def execute(host=None, commands=None):
     debug(commands=commands)
@@ -245,7 +292,7 @@ def execute(host=None, commands=None):
 if __name__ == '__main__':
     print("PID: ", os.getpid())
     print("MPD_HOST (Environment): ", os.getenv('MPD_HOST'))
-    # print("len(sys.argv) =", len(sys.argv))
+    #print("len(sys.argv) =", len(sys.argv))
     if len(sys.argv) == 2:
         if len(str(sys.argv[1]).strip().split(".")) == 4:
             execute(host=sys.argv[1])
