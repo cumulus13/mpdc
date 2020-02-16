@@ -2,10 +2,13 @@ import os
 import sys
 import mpd
 import traceback
-HOST = '192.168.43.1'
+HOST = '127.0.0.1'
 if os.getenv('MPD_HOST'):
     HOST = os.getenv('MPD_HOST')
-PORT = 6600
+if os.getenv('MPD_PORT'):
+    HOST = os.getenv('MPD_PORT')
+else:
+    PORT = 6600
 CLIENT = ''
 import time
 import cmdw3
