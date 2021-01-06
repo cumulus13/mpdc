@@ -209,7 +209,8 @@ def command_execute(commands, host=None):
     print("COMMAND :", " ".join(commands))
     if len(commands) > 1:
         args = tuple(commands[1:])
-        # print("ARGS =", args)
+        debug(args = args)
+        debug(commands = commands)
         if 'album' in commands and 'find' in commands:
             x = getattr(CLIENT, commands[0])(*args)
             if not x:
@@ -260,13 +261,21 @@ def command_execute(commands, host=None):
         # 	x = organizer_album_by_artist(x)
         # else:
         if x:
+            debug(x = x)
             if 'find' in commands:
                 x = organizer_album_by_artist(x)
+                debug(x = x)
+                # sys.exit()
                 navigator_find(x, host)
             elif 'list' in commands:
                 x2 = []
                 for i in x:
-                    x2.append(str(x.index(i)) + ". " + i)
+                    if isinstance(i, dict):
+                        if i.get('artist'):
+                            x2.append(str(x.index(i)) + ". " + i.get('artist'))        
+                    else:
+                        x2.append(str(x.index(i)) + ". " + i)
+                    
                 makeList(x2, n_list)
             else:
                 print(x)
@@ -323,7 +332,7 @@ if __name__ == '__main__':
         if len(str(sys.argv[1]).strip().split(".")) == 4:
             #print("sys.argv[2:] =", sys.argv[2:]) 
             execute(host=sys.argv[1], commands=sys.argv[2:])
-        else:		
+        else:
             # print("sys.argv[1:] =", sys.argv[1:])
             execute(commands=sys.argv[1:])		
 
