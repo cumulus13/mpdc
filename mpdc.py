@@ -8,7 +8,7 @@ import traceback
 from configset import configset
 
 HOST = '127.0.0.1'
-configname = os.path.join(os.path.dirname(__file__), 'mpdc.ini')
+configname = os.path.join(os.path.relpath(os.path.dirname(__file__)), 'mpdc.ini')
 config = configset(configname)
 #config.configname = configname
 if config.read_config('server', 'host', value = '127.0.0.1'):
@@ -21,10 +21,13 @@ if config.read_config('server', 'port', value = '6600'):
         PORT = 6600
 if os.getenv('MPD_HOST'):
     HOST = os.getenv('MPD_HOST')
-if os.getenv('MPD_PORT'):
-    HOST = os.getenv('MPD_PORT')
 else:
-    PORT = 6600
+    HOST = '127.0.0.1'
+if os.getenv('MPD_PORT'):
+    PORT = os.getenv('MPD_PORT')
+else:
+    PORT = '6600'
+
 print("HOST:", HOST)
 print("PORT:", PORT)
 CLIENT = ''
@@ -33,6 +36,20 @@ import cmdw
 from pydebugger.debug import debug
 from make_colors import make_colors
 import re
+import random
+
+BG_COLORS = ['r', 'bl', 'lg', 'c', 'y', 'lm', 'lb', 'g', 'lg', 'ly', 'm']
+
+def setColor(bg):
+    if bg == 'y' or bg == 'ly' or bg == 'yellow' or bg == 'lightyellow':
+        fg = 'b'
+    elif bg == 'c' or bg == 'lc' or bg == 'cyan' or bg == 'lightcyan':
+        fg = 'b'
+    elif bg == 'g' or bg == 'lg' or bg == 'green' or bg == 'lightgreen':
+        fg = 'b'
+    else:
+        fg = 'lw'
+    return fg, bg
 
 def makeList(alist, ncols, vertically=True, file=None):
     from distutils.version import StrictVersion # pep 386
@@ -72,10 +89,12 @@ def conn0(host="192.168.43.1", port=6600, playlist="radio", columns=200):
     return mpd_client
 
 
-def conn(host=None, port=6600):
+def conn(host=None, port=6600, max_try=10):
     global HOST
     global PORT
     CLIENT = ''
+    error = False
+    nt = 0
     mpd_client = mpd.MPDClient()
     while 1:
         try:
@@ -89,7 +108,22 @@ def conn(host=None, port=6600):
             mpd_client.connect(host=HOST, port=PORT)
             break
         except:
+            tp, vl, tr = sys.exc_info()
+            print(make_colors("Try:", 'lw', 'bl') + " " + make_colors(str(nt), 'b', 'y'))
+            print("     Type traceback:", make_colors(vl.__class__.__name__, 'lw', 'r'))
+            print("     Msg  traceback:", make_colors(vl.args, 'b', 'g'))
+            if str(vl.__class__.__name__) == 'OSError' and "No route to host" in vl.args:
+                print(make_colors("CaNot Connected !, maybe host is down !", 'lw', 'r'))
+                break
+            if nt < max_try:
+                nt+=1
+            else:
+                print(make_colors("Can't connect to {}:{} !".format(HOST, PORT), 'lw', 'lr'))
+                error = True
+                break
             time.sleep(0.03)
+    if error:
+        sys.exit()
     mpd_client.timeout = 20
     mpd_client.idletimeout = None
     return mpd_client
@@ -187,13 +221,25 @@ def navigator_find(x, host=None, clear=True):
             executor(q)
 
 def command_execute(commands, host=None):
+    if config.get_config('server', 'host'):
+        host = config.get_config('server', 'host')
+    if config.get_config('server', 'port'):
+        port = config.get_config('server', 'port')
+    if os.getenv('MPD_HOST'):
+        host = os.getenv('MPD_HOST')
+    if os.getenv('MPD_PORT'):
+        port = os.getenv('MPD_PORT')
+    debug(host = host)
+    debug(port = port)
+    print(make_colors("command_execute HOST:", 'lw', 'bl') + " " + make_colors(host, 'b', 'y'))
+    print(make_colors("command_execute PORT:", 'lw', '1r') + " " + make_colors(str(port), 'b', 'lc'))
     n_list = 10
     x_find = False
     #debug('commands_execute')
     if isinstance(commands, list):
         commands = " ".join(commands)
-    CLIENT = conn(host)
-    # debug('commands_execute', "CLIENT")
+    CLIENT = conn(host, port)
+    debug(CLIENT = CLIENT)
     debug(commands=commands)
     if 'album' in commands or 'find' in commands:
         commands = str(commands).strip().split(' ', 2)
@@ -278,7 +324,11 @@ def command_execute(commands, host=None):
                     
                 makeList(x2, n_list)
             else:
-                print(x)
+                if isinstance(x, dict):
+                    for r in x:
+                        print(r + ": " + x.get(r))
+                else:
+                    print(x)
         # print("#"*cmdw.getWidth())
     else:
         if 'playlist' in commands:
@@ -298,7 +348,12 @@ def command_execute(commands, host=None):
         else:
             x = getattr(CLIENT, commands[0])()
             if x:
-                print(x)
+                if isinstance(x, dict):
+                    for r in x:
+                        fg, bg = setColor(random.choice(BG_COLORS))
+                        print(make_colors(str(r).upper() + " " * (15 - len(r)), fg, bg) + make_colors(":", 'y') + " " + make_colors(str(x.get(r)), fg, bg))
+                else:
+                    print(x)
             # print("#"*cmdw.getWidth())
 
 def execute(host=None, commands=None):
