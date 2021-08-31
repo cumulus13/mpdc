@@ -1,4 +1,5 @@
 #!python
+from pause import pause
 import os
 import sys
 if sys.version_info.major == 2:
@@ -130,6 +131,7 @@ def conn(host=None, port=6600, max_try=10):
 
 def organizer_album_by_artist(results):
     # print ("results =", results[1])
+    debug(results = results)
     albums = []
     #paths = []
     album_paths = {}
@@ -138,11 +140,13 @@ def organizer_album_by_artist(results):
         #print ("i =",i)
         if isinstance(i, list):
             for x in i:
-                albums.append(x.get('album'))
+                albums.append((x.get('album'), x.get('artist'), x.get('disc'), os.path.dirname(x.get('file')), x.get('date')))
         else:		
-            albums.append(i.get('album'))
+            albums.append((i.get('album'), i.get('artist'), x.get('disc'), os.path.dirname(x.get('file')), x.get('date')))
         #paths.append(os.path.dirname(i.get(file)))
-    album = set(albums)
+    debug(albums = albums)
+    album = sorted(set(albums))
+    debug(album = album)
     #album = albums
     # print("album =", album)
     for i in album:
@@ -150,27 +154,32 @@ def organizer_album_by_artist(results):
         for x in results:
             if isinstance(x, list):
                 for y in x:
-                    if y.get('album') == i:
+                    if y.get('album') == i[0]:
                         album_paths.update(
                             {
                                 n: {
-                                        'album':i,
-                                            'path':os.path.dirname(y.get('file')),
-                                    }
+                                    'album':i[0],
+                                    'path':i[3],
+                                    'artist':i[1],
+                                    'year':i[4]
+                                }
                             }
                         )
                         # n+=1
                         break		
             else:
-                if x.get('album') == i:
+                if x.get('album') == i[0]:
                     if not os.path.dirname(x.get('file')) == file_album_path:
                         file_album_path = os.path.dirname(x.get('file'))
                         n+=1
                     album_paths.update(
                         {
                         n: {
-                            'album':i,
-                            'path':os.path.dirname(x.get('file')),
+                            'album':i[0],
+                            'artist':i[1],
+                            # 'path':os.path.dirname(x.get('file')),
+                            'path':i[3],
+                            'year':i[4]
                         }
                     })
                         
@@ -184,6 +193,7 @@ def navigator_find(x, host=None, clear=True):
     play_root=False
     multiplay=False
     def executor(q):
+        q = int(q.strip()) - 1
         # print ("play_root =", play_root)
         if str(q).isdigit():
             if not int(q) > len(x.keys()):
@@ -200,8 +210,9 @@ def navigator_find(x, host=None, clear=True):
                 if not multiplay:
                     command_execute('play') 
     for i in x:
-        print(str(i) + ". " + make_colors("Album:", 'y') + " " + make_colors(x.get(i).get('album'), 'b', 'ly'))
-        print(" "*len(str(i)) + "  " + make_colors("Path :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
+        print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(x.get(i).get('album'), 'b', 'ly') + " " + make_colors("[" + x.get(i).get('year') + "]", 'lw', 'm'))
+        print(" "*len(str(i)) + "  " + make_colors("Artist:", 'lg') + " " + make_colors(x.get(i).get('artist'), 'b', 'lg', ['bold', 'italic']))
+        print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
         print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
     q = input(make_colors('Play Album', 'b', 'ly') + ' ' + make_colors('[number: n1,n2,n4|n5|n7;n8,n10-n34]:', 'b', 'lg') + " ")
     if q:
@@ -234,17 +245,32 @@ def navigator_find(x, host=None, clear=True):
     #    print("list_q =", list_q)
 
 def format_playlist(playname):
-    data = re.compile(r'file\: (?P<artist>.*?) - (?P<album>.*?)/(?P<disc>.*?)/(?P<track>\d.*)\. (?P<title>.*)')
-    artist, album, disc, track, title = data.match(playname).groups()
-    #print("DATA =", data)
-    #print("ARTIST:", artist)
-    #print("ALBUM :", album)
-    #print("DISC  :", disc)
-    #print("TRACK :", track)
-    #print("TITLE :", title)
+    debug(playname = playname)
+    # pause()
+    error = False    
+    disc = "01"
+    try:
+        data = re.compile(r'file\: (?P<path>.*?)/(?P<artist>.*?)/(?P<album>.*?)/(?P<track>\d.)\. (?P<title>.*)')
+        path, artist, album, track, title = data.match(playname).groups()
+    except:
+        error = True
+    if error:
+        try:
+            data = re.compile(r'file\: (?P<artist>.*?) - (?P<album>.*?)/(?P<disc>.*?)/(?P<track>\d.*)\. (?P<title>.*)')
+            artist, album, disc, track, title = data.match(playname).groups()
+        except:
+            error = True
+    # print("PLAYNAME =", playname)
+    # print("DATA =", data)
+    # print("ARTIST:", artist)
+    # print("ALBUM :", album)
+    # print("DISC  :", disc)
+    # print("TRACK :", track)
+    # print("TITLE :", title)
     return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
 
 def command_execute(commands, host=None):
+    
     if config.get_config('server', 'host'):
         host = config.get_config('server', 'host')
     if config.get_config('server', 'port'):
@@ -272,6 +298,7 @@ def command_execute(commands, host=None):
     else:
         commands = str(commands).strip().split(' ')
     # print("commands tuple =", (tuple(commands[1:])))
+    debug(commands = commands)
     for i in commands:
         if i[0] == 'N' and i[1].isdigit():
             n_list = int(i[1:])
@@ -305,8 +332,8 @@ def command_execute(commands, host=None):
                 debug(commands_index_album_add = commands[commands.index('album') + 1].lower())
                 x_find_album = []
                 for i in x:
-                    if commands[commands.index('album') + 1].lower() in str(i).lower():
-                        x1 = getattr(CLIENT, 'find')('album', i)
+                    if commands[commands.index('album') + 1].lower() in str(i.get('album')).lower().strip():
+                        x1 = getattr(CLIENT, 'find')('album', i.get('album'))
                         x_find_album.append(x1)
                 x = x_find_album
                 x_find = True
@@ -315,19 +342,25 @@ def command_execute(commands, host=None):
             if not x:
                 debug("not x")
                 x = getattr(CLIENT, 'list')('artist')
+                # debug(x = x)
                 # print ("XXX =", x)
                 debug(len_x = len(x))
                 debug(commands_index_album_add = commands[commands.index('artist') + 1].lower())
                 x_find_artist = []
                 for i in x:
-                    if commands[commands.index('artist') + 1].lower() in str(i).lower():
-                        x1 = getattr(CLIENT, 'find')('artist', i)
+                    if commands[commands.index('artist') + 1].lower() in str(i.get('artist')).lower().strip():
+                        debug(find = str(i.get('artist')).lower().strip())
+                        debug(patten = commands[commands.index('artist') + 1].lower())
+                        x1 = getattr(CLIENT, 'find')('artist', i.get('artist'))
+                        debug(x1 = x1)
                         x_find_artist.append(x1)
+                        debug(x_find_artist = x_find_artist)
                 x = x_find_artist
-                # print ("XXX =", x)
                 x_find = True
+                debug(x = x)
         elif 'playlist' in commands:
             x = getattr(CLIENT, commands[0])()
+            debug(x = x)
             len_x = len(x)
             n = 1
             for i in x:
@@ -378,6 +411,7 @@ def command_execute(commands, host=None):
     else:
         if 'playlist' in commands:
             x = getattr(CLIENT, commands[0])()
+            debug(x = x)
             len_x = len(x)
             n = 1
             for i in x:
