@@ -137,13 +137,15 @@ def organizer_album_by_artist(results):
     #paths = []
     album_paths = {}
     n = 0
+    #debug(results = results, debug = True)
     for i in results:
         #print ("i =",i)
+        #debug(i = i, debug = True)
         if isinstance(i, list):
             for x in i:
                 albums.append((x.get('album'), x.get('artist'), x.get('disc'), os.path.dirname(x.get('file')), x.get('date')))
         else:		
-            albums.append((i.get('album'), i.get('artist'), x.get('disc'), os.path.dirname(x.get('file')), x.get('date')))
+            albums.append((i.get('album'), i.get('artist'), i.get('disc'), os.path.dirname(i.get('file')), i.get('date')))
         #paths.append(os.path.dirname(i.get(file)))
     debug(albums = albums)
     album = sorted(set(albums))
@@ -245,30 +247,98 @@ def navigator_find(x, host=None, clear=True):
     #    list_q = re.split(" |-|,|\|\.", q)
     #    list_q = [d.strip() for d in list_q]
     #    print("list_q =", list_q)
+def format_current(playname, len_x):
+    artist = playname.get('artist')
+    albumartist = playname.get('albumartist')
+    title = playname.get('title')
+    album = playname.get('album')
+    track = playname.get('track')
+    year = playname.get('date')
+    genre = playname.get('genre')
+    disc = "0" + playname.get('disc')
+    duration = "%2.2f"%(float(playname.get('duration')) / 60)
+    filename = playname.get('file')
+    if len(str(track)) == 1:
+        track = "0" + str(track)
+    elif len(str(track)) == 1 and len(str(len_x)) == 3:
+        track = "00" + str(track)                                
+    elif len(str(track)) == 2 and len(str(len_x)) == 3:
+        n = "0" + str(n)                                                        
+    return make_colors(artist, 'lw', 'bl') + " - " +\
+           make_colors(album, 'lw', 'm') + "/" +\
+           make_colors(albumartist, 'lw', 'm') + " " +\
+           make_colors("(" + year + ")", 'b', 'lc') + "/" +\
+           make_colors(disc, 'b', 'lg') + "/" +\
+           make_colors(track, 'r', 'lw') + ". " +\
+           make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" +\
+           make_colors(duration, 'b', 'lg') + "]" + " [" +\
+           make_colors(os.path.splitext(filename)[1][1:].upper(), 'lw', 'r') +\
+           "]"
 
-def format_playlist(playname):
+def format_playlist(playname, len_x):
     debug(playname = playname)
     # pause()
     error = False    
     disc = "01"
-    try:
-        data = re.compile(r'file\: (?P<path>.*?)/(?P<artist>.*?)/(?P<album>.*?)/(?P<track>\d.)\. (?P<title>.*)')
-        path, artist, album, track, title = data.match(playname).groups()
-    except:
-        error = True
-    if error:
+    year = ''
+    if isinstance(playname, str):
         try:
-            data = re.compile(r'file\: (?P<artist>.*?) - (?P<album>.*?)/(?P<disc>.*?)/(?P<track>\d.*)\. (?P<title>.*)')
-            artist, album, disc, track, title = data.match(playname).groups()
+            data = re.compile(r'file\: (?P<path>.*?)/(?P<artist>.*?)/(?P<album>.*?)/(?P<track>\d.)\. (?P<title>.*)')
+            path, artist, album, track, title = data.match(playname).groups()
         except:
             error = True
-    # print("PLAYNAME =", playname)
-    # print("DATA =", data)
-    # print("ARTIST:", artist)
-    # print("ALBUM :", album)
-    # print("DISC  :", disc)
-    # print("TRACK :", track)
-    # print("TITLE :", title)
+        if error:
+            try:
+                data = re.compile(r'file\: (?P<artist>.*?) - (?P<album>.*?)/(?P<disc>.*?)/(?P<track>\d.*)\. (?P<title>.*)')
+                artist, album, disc, track, title = data.match(playname).groups()
+            except:
+                #print("error:", traceback.format_exc())
+                error = True
+        if error:
+            try:
+                data = re.compile(r'file\: (?P<path>.*?)/(?P<artist>.*?) - (?P<album>.*?)\((?P<year>\d{4})\)/(?P<track>\d.)\. (?P<title>.*)', re.I)
+                path, artist, album, year, track, title = data.match(playname).groups()
+            except:
+                #print("error:", traceback.format_exc())
+                error = True            
+        #print("PLAYNAME =", playname)
+        #print("DATA =", data)
+        #print("ARTIST:", artist)
+        #print("ALBUM :", album)
+        #print("DISC  :", disc)
+        #print("TRACK :", track)
+        #print("TITLE :", title)
+        if not disc:
+            disc = "01"
+    elif isinstance(playname, dict):
+        artist = playname.get('artist')
+        albumartist = playname.get('albumartist')
+        title = playname.get('title')
+        album = playname.get('album')
+        track = playname.get('track')
+        year = playname.get('date')
+        genre = playname.get('genre')
+        disc = "0" + playname.get('disc')
+        duration = "%2.2f"%(float(playname.get('duration')) / 60)
+        filename = playname.get('file')
+        if len(str(track)) == 1:
+            track = "0" + str(track)
+        elif len(str(track)) == 1 and len(str(len_x)) == 3:
+            track = "00" + str(track)                                
+        elif len(str(track)) == 2 and len(str(len_x)) == 3:
+            n = "0" + str(n)                                                        
+        return make_colors(artist, 'lw', 'bl') + " - " +\
+               make_colors(album, 'lw', 'm') + "/" +\
+               make_colors(albumartist, 'lw', 'm') + " " +\
+               make_colors("(" + year + ")", 'b', 'lc') + "/" +\
+               make_colors(disc, 'b', 'lg') + "/" +\
+               make_colors(track, 'r', 'lw') + ". " +\
+               make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" +\
+               make_colors(duration, 'b', 'lg') + "]" + " [" +\
+               make_colors(os.path.splitext(filename)[1][1:].upper(), 'lw', 'r') +\
+               "]"
+    if year:
+        return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + " " + make_colors("(" + year + ")", 'b', 'lc') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
     return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
 
 def command_execute(commands, host=None, port=None):
@@ -385,7 +455,7 @@ def command_execute(commands, host=None, port=None):
                 debug(x = x)
         elif 'playlist' in commands:
             try:
-                x = getattr(CLIENT, commands[0])(*args)
+                x = getattr(CLIENT, "playlistid")(*args)
             except:
                 print(make_colors("[playlist] Command Errors !", 'lw', 'r'))
                 return False
@@ -399,11 +469,13 @@ def command_execute(commands, host=None, port=None):
                     n = "00" + str(n)                                
                 elif len(str(n)) == 2 and len(str(len_x)) == 3:
                     n = "0" + str(n)                                
-                print (str(n) + ". " + i)
+                #print (str(n) + ". " + i)
+                print (make_colors(str(n), 'bl') + ". " + format_playlist(i, len_x))
                 n = int(n)
                 n += 1
             qp = input(make_colors('Play musics', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
-            return command_execute(["play", qp.strip()])
+            if qp:
+                return command_execute(["play", qp.strip()])
             
         else:
             try:
@@ -443,7 +515,7 @@ def command_execute(commands, host=None, port=None):
         # print("#"*cmdw.getWidth())
     else:
         if 'playlist' in commands:
-            x = getattr(CLIENT, commands[0])()
+            x = getattr(CLIENT, "playlistid")()
             debug(x = x)
             len_x = len(x)
             n = 1
@@ -454,11 +526,16 @@ def command_execute(commands, host=None, port=None):
                     n = "00" + str(n)                                
                 elif len(str(n)) == 2 and len(str(len_x)) == 3:
                     n = "0" + str(n)                                                
-                print (make_colors(str(n), 'bl') + ". " + format_playlist(i))
+                print (make_colors(str(n), 'bl') + ". " + format_playlist(i, len_x))
                 n = int(n)
                 n += 1
+            currentsong = getattr(CLIENT, "currentsong")()
+            print("-" * 120)
+            print(make_colors("current playing:", 'r', 'lw') + " " + format_current(currentsong, len_x))
+            print("_" * 120)
             qp = input(make_colors('Play musics', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
-            return command_execute(["play", qp.strip()])
+            if qp:
+                return command_execute(["play", qp.strip()])
         else:
             x = getattr(CLIENT, commands[0])()
             if x:
