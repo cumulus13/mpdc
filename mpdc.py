@@ -7,6 +7,7 @@ if sys.version_info.major == 2:
 import mpd
 import traceback
 from configset import configset
+import argparse
 
 HOST = '127.0.0.1'
 configname = os.path.join(os.path.relpath(os.path.dirname(__file__)), 'mpdc.ini')
@@ -29,8 +30,8 @@ if os.getenv('MPD_PORT'):
 else:
     PORT = '6600'
 
-print("HOST:", HOST)
-print("PORT:", PORT)
+# print("HOST:", HOST)
+# print("PORT:", PORT)
 CLIENT = ''
 import time
 import cmdw
@@ -205,6 +206,7 @@ def navigator_find(x, host=None, clear=True):
                 else:
                     path = x.get(int(q)).get('path')
                     debug(path=path)
+                    # pause()
                     # print ("path 1 =",path)
                     command_execute('add %s'%(path))
                 if not multiplay:
@@ -269,14 +271,15 @@ def format_playlist(playname):
     # print("TITLE :", title)
     return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
 
-def command_execute(commands, host=None):
-    
-    if config.get_config('server', 'host'):
-        host = config.get_config('server', 'host')
-    if config.get_config('server', 'port'):
-        port = config.get_config('server', 'port')
+def command_execute(commands, host=None, port=None):
+    if not host:
+        if config.get_config('server', 'host'):
+            host = config.get_config('server', 'host')
     if os.getenv('MPD_HOST'):
         host = os.getenv('MPD_HOST')
+    if not port:
+        if config.get_config('server', 'port'):
+            port = config.get_config('server', 'port')
     if os.getenv('MPD_PORT'):
         port = os.getenv('MPD_PORT')
     debug(host = host)
@@ -312,8 +315,16 @@ def command_execute(commands, host=None):
             if args[0].isdigit():
                 args = [str(int(args[0].strip()) - 1)]
                 print(make_colors("Playing track:", 'lw', 'bl') + " " + make_colors(args[0], 'r', 'lw'))
-                x = getattr(CLIENT, commands[0])(*args)
-                y = getattr(CLIENT, "currentsong")()
+                try:
+                    x = getattr(CLIENT, commands[0])(*args)
+                except:
+                    print(make_colors("[play] Command Errors !", 'lw', 'r'))
+                    return False
+                try:
+                    y = getattr(CLIENT, commands[0])(*args)
+                except:
+                    print(make_colors("[current song] Command Errors !", 'lw', 'r'))
+                    return False
                 if y:
                     if isinstance(y, dict):
                         for r in y:
@@ -324,7 +335,13 @@ def command_execute(commands, host=None):
             else:
                 print(make_colors("Failed to play number {}".format(args[0]), 'lw', 'r'))
         elif 'album' in commands and 'find' in commands:
-            x = getattr(CLIENT, commands[0])(*args)
+            try:
+                x = getattr(CLIENT, commands[0])(*args)
+            except:
+                print(make_colors("[album] Command Errors !", 'lw', 'r'))
+                return False
+            # debug(x = x)
+            # pause()
             if not x:
                 debug("not x")
                 x = getattr(CLIENT, 'list')('album')
@@ -333,12 +350,20 @@ def command_execute(commands, host=None):
                 x_find_album = []
                 for i in x:
                     if commands[commands.index('album') + 1].lower() in str(i.get('album')).lower().strip():
+                        debug(find = str(i.get('album')).lower().strip())
+                        debug(patten = commands[commands.index('album') + 1].lower())
                         x1 = getattr(CLIENT, 'find')('album', i.get('album'))
+                        debug(x1 = x1)
                         x_find_album.append(x1)
+                        debug(x_find_album = x_find_album)
                 x = x_find_album
                 x_find = True
         elif 'artist' in commands and 'find' in commands:
-            x = getattr(CLIENT, commands[0])(*args)
+            try:
+                x = getattr(CLIENT, commands[0])(*args)
+            except:
+                print(make_colors("[artist] Command Errors !", 'lw', 'r'))
+                return False
             if not x:
                 debug("not x")
                 x = getattr(CLIENT, 'list')('artist')
@@ -359,7 +384,11 @@ def command_execute(commands, host=None):
                 x_find = True
                 debug(x = x)
         elif 'playlist' in commands:
-            x = getattr(CLIENT, commands[0])()
+            try:
+                x = getattr(CLIENT, commands[0])(*args)
+            except:
+                print(make_colors("[playlist] Command Errors !", 'lw', 'r'))
+                return False
             debug(x = x)
             len_x = len(x)
             n = 1
@@ -377,7 +406,11 @@ def command_execute(commands, host=None):
             return command_execute(["play", qp.strip()])
             
         else:
-            x = getattr(CLIENT, commands[0])(*args)
+            try:
+                x = getattr(CLIENT, commands[0])(*args)
+            except:
+                print(make_colors("[else] Command Errors !", 'lw', 'r'))
+                return False                
         # if x_find:
         # 	x = organizer_album_by_artist(x)
         # else:
@@ -437,7 +470,7 @@ def command_execute(commands, host=None):
                     print(x)
             # print("#"*cmdw.getWidth())
 
-def execute(host=None, commands=None):
+def execute(host=None, port=None, commands=None):
     debug(commands=commands)
     if not commands:
         q = input('FUNCTION: ')
@@ -450,30 +483,45 @@ def execute(host=None, commands=None):
         list_command = str(q).strip().split("#")
         debug(list_command=list_command)
         for i in list_command:
-            command_execute(str(i).strip(), host)
+            command_execute(str(i).strip(), host, port)
     else:
-        command_execute(q, host)
+        command_execute(q, host, port)
+
+def usage():
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-H', '--host', action='store', help='MPD HOST, default: 127.0.0.1', default='127.0.0.1', type=str)
+    parser.add_argument('-P', '--port', action='store', help='MPD PORT, default: 6600', default=6600, type=int)
+    parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
+    if len(sys.argv) == 1:
+        parser.print_help()
+        print("MPD_HOST (Environment): ", os.getenv('MPD_HOST'))
+    else:
+        args = parser.parse_args()
+        PORT = args.port
+        HOST = args.host
+        execute(args.host, args.port, args.COMMANDS)
 
 
 if __name__ == '__main__':
     print("PID : ", os.getpid())
-    print("MPD_HOST (Environment): ", os.getenv('MPD_HOST'))
-    #print("len(sys.argv) =", len(sys.argv))
-    if len(sys.argv) == 2:
-        if len(str(sys.argv[1]).strip().split(".")) == 4:
-            execute(host=sys.argv[1])
-        else:
-            execute(commands=sys.argv[1:])
-    elif len(sys.argv) > 2:
-        if len(str(sys.argv[1]).strip().split(".")) == 4:
-            #print("sys.argv[2:] =", sys.argv[2:]) 
-            execute(host=sys.argv[1], commands=sys.argv[2:])
-        else:
-            # print("sys.argv[1:] =", sys.argv[1:])
-            execute(commands=sys.argv[1:])		
+    usage()
+    # print("MPD_HOST (Environment): ", os.getenv('MPD_HOST'))
+    # print("len(sys.argv) =", len(sys.argv))
+    # if len(sys.argv) == 2:
+    #     if len(str(sys.argv[1]).strip().split(".")) == 4:
+    #         execute(host=sys.argv[1])
+    #     else:
+    #         execute(commands=sys.argv[1:])
+    # elif len(sys.argv) > 2:
+    #     if len(str(sys.argv[1]).strip().split(".")) == 4:
+    #         #print("sys.argv[2:] =", sys.argv[2:]) 
+    #         execute(host=sys.argv[1], commands=sys.argv[2:])
+    #     else:
+    #         # print("sys.argv[1:] =", sys.argv[1:])
+    #         execute(commands=sys.argv[1:])		
 
-    else:
-        execute()
+    # else:
+    #     execute()
 
 
 
