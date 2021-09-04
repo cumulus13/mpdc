@@ -1,6 +1,13 @@
 #!python
-from pause import pause
+
+try:    
+    from pause import pause
+except:
+    def pause(*args, **kwargs):
+        q = input("Please enter to continue ...")
+        return()
 import os
+from pprint import pprint
 import sys
 if sys.version_info.major == 2:
     input = raw_input
@@ -212,9 +219,14 @@ def navigator_find(x, host=None, clear=True):
                     # print ("path 1 =",path)
                     command_execute('add %s'%(path))
                 if not multiplay:
-                    command_execute('play') 
+                    command_execute('play')
+    #debug(x = x, debug = True)
+    #pprint(x)
     for i in x:
-        print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(x.get(i).get('album'), 'b', 'ly') + " " + make_colors("[" + x.get(i).get('year') + "]", 'lw', 'm'))
+        year = x.get(i).get('year')
+        if not year:
+            year = ''        
+        print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(x.get(i).get('album'), 'b', 'ly') + " " + make_colors("[" + year + "]", 'lw', 'm'))
         print(" "*len(str(i)) + "  " + make_colors("Artist:", 'lg') + " " + make_colors(x.get(i).get('artist'), 'b', 'lg', ['bold', 'italic']))
         print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
         print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
@@ -255,25 +267,40 @@ def format_current(playname, len_x):
     track = playname.get('track')
     year = playname.get('date')
     genre = playname.get('genre')
-    disc = "0" + playname.get('disc')
-    duration = "%2.2f"%(float(playname.get('duration')) / 60)
+    disc = playname.get('disc')
+    if not year:
+        year = ''
+    if disc:
+        disc = "0" + disc
+    else:
+        disc = "01"
+    try:
+        duration = "%2.2f"%(float(playname.get('duration')) / 60)
+    except TypeError:
+        duration = ''
+    else:
+        print(traceback.format_exc())
     filename = playname.get('file')
     if len(str(track)) == 1:
         track = "0" + str(track)
     elif len(str(track)) == 1 and len(str(len_x)) == 3:
         track = "00" + str(track)                                
     elif len(str(track)) == 2 and len(str(len_x)) == 3:
-        n = "0" + str(n)                                                        
-    return make_colors(artist, 'lw', 'bl') + " - " +\
-           make_colors(album, 'lw', 'm') + "/" +\
-           make_colors(albumartist, 'lw', 'm') + " " +\
-           make_colors("(" + year + ")", 'b', 'lc') + "/" +\
-           make_colors(disc, 'b', 'lg') + "/" +\
-           make_colors(track, 'r', 'lw') + ". " +\
-           make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" +\
-           make_colors(duration, 'b', 'lg') + "]" + " [" +\
-           make_colors(os.path.splitext(filename)[1][1:].upper(), 'lw', 'r') +\
-           "]"
+        n = "0" + str(n)
+    if title:
+        return make_colors(artist, 'lw', 'bl') + " - " +\
+               make_colors(album, 'lw', 'm') + "/" +\
+               make_colors(albumartist, 'lw', 'm') + " " +\
+               make_colors("(" + year + ")", 'b', 'lc') + "/" +\
+               make_colors(disc, 'b', 'lg') + "/" +\
+               make_colors(track, 'r', 'lw') + ". " +\
+               make_colors(title, 'b', 'ly') + " [" +\
+               make_colors(duration, 'b', 'lg') + "]" + " [" +\
+               make_colors(os.path.splitext(filename)[1][1:].upper(), 'lw', 'r') +\
+               "]"        
+    else:
+        return ''
+    
 
 def format_playlist(playname, len_x):
     debug(playname = playname)
@@ -401,7 +428,8 @@ def command_execute(commands, host=None, port=None):
                             fg, bg = setColor(random.choice(BG_COLORS))
                             print(make_colors(str(r).upper() + " " * (15 - len(r)), fg, bg) + make_colors(":", 'y') + " " + make_colors(str(y.get(r)), fg, bg))
                 else:
-                    print(x)
+                    if x:
+                        print(x)
             else:
                 print(make_colors("Failed to play number {}".format(args[0]), 'lw', 'r'))
         elif 'album' in commands and 'find' in commands:
@@ -475,7 +503,8 @@ def command_execute(commands, host=None, port=None):
                 n += 1
             qp = input(make_colors('Play musics', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
             if qp:
-                return command_execute(["play", qp.strip()])
+                if qp.strip().isdigit() and int(qp.strip()) < len(x):
+                    return command_execute(["play", str(int(qp.strip()) - 1)])
             
         else:
             try:
@@ -530,12 +559,13 @@ def command_execute(commands, host=None, port=None):
                 n = int(n)
                 n += 1
             currentsong = getattr(CLIENT, "currentsong")()
-            print("-" * 120)
+            print("-" * ((cmdw.getWidth() * 2) - 2))
             print(make_colors("current playing:", 'r', 'lw') + " " + format_current(currentsong, len_x))
-            print("_" * 120)
+            print("_" * ((cmdw.getWidth() * 2) - 2))
             qp = input(make_colors('Play musics', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
             if qp:
-                return command_execute(["play", qp.strip()])
+                if qp.strip().isdigit() and int(qp.strip()) < len(x):
+                    return command_execute(["play", str(int(qp.strip()) - 1)])
         else:
             x = getattr(CLIENT, commands[0])()
             if x:
