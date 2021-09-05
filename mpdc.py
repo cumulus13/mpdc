@@ -278,8 +278,8 @@ def format_current(playname, len_x):
         duration = "%2.2f"%(float(playname.get('duration')) / 60)
     except TypeError:
         duration = ''
-    else:
-        print(traceback.format_exc())
+    #else:
+        #print(traceback.format_exc())
     filename = playname.get('file')
     if len(str(track)) == 1:
         track = "0" + str(track)
@@ -345,7 +345,11 @@ def format_playlist(playname, len_x):
         track = playname.get('track')
         year = playname.get('date')
         genre = playname.get('genre')
-        disc = "0" + playname.get('disc')
+        disc = playname.get('disc')
+        if not disc:
+            disc = "01"
+        else:
+            disc = "0" + playname.get('disc')
         duration = "%2.2f"%(float(playname.get('duration')) / 60)
         filename = playname.get('file')
         if len(str(track)) == 1:
