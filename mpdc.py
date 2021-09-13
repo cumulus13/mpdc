@@ -314,7 +314,8 @@ def format_current(playname, len_x):
                make_colors(title, 'b', 'ly') + " [" +\
                make_colors(duration, 'b', 'lg') + "]" + " [" +\
                make_colors(os.path.splitext(filename)[1][1:].upper(), 'lw', 'r') +\
-               "]"        
+               "] [" +\
+               make_colors("ID:" + str(playname.get('id')), 'b', 'lc') + "]"
     else:
         return ''
     
@@ -355,6 +356,7 @@ def format_playlist(playname, len_x):
         if not disc:
             disc = "01"
     elif isinstance(playname, dict):
+        id = playname.get('id')
         artist = playname.get('artist')
         albumartist = playname.get('albumartist')
         title = playname.get('title')
@@ -384,10 +386,10 @@ def format_playlist(playname, len_x):
                make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" +\
                make_colors(duration, 'b', 'lg') + "]" + " [" +\
                make_colors(os.path.splitext(filename)[1][1:].upper(), 'lw', 'r') +\
-               "]"
+               "] [" + make_colors("ID:" + str(id), 'b', 'lc') + "]"
     if year:
         return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + " " + make_colors("(" + year + ")", 'b', 'lc') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
-    return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
+    return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "] [" + make_colors("ID:" + str(id), 'b', 'lc') + "]"
 
 def command_execute(commands, host=None, port=None):
     debug(commands = commands)
@@ -418,7 +420,7 @@ def command_execute(commands, host=None, port=None):
     debug(commands=commands)
     if 'album' in commands or 'find' in commands:
         commands = str(commands).strip().split(' ', 2)
-    elif 'add' in commands:
+    elif 'add' in commands or 'remove' in commands or 'delete' in commands:
         commands = str(commands).strip().split(' ', 1)
     else:
         commands = str(commands).strip().split(' ')
@@ -532,6 +534,20 @@ def command_execute(commands, host=None, port=None):
                 if qp.strip().isdigit() and int(qp.strip()) < len(x):
                     return command_execute(["play", str(int(qp.strip()))])
             
+        elif 'delete' in commands or 'remove' in commands:
+            numbers = list(filter(None, commands[1].split(' ')))
+            debug(numbers = numbers, debug = True)
+            if numbers:
+                try:
+                    x = getattr(CLIENT, "playlistid")()
+                except:
+                    print(make_colors("[delete] Error get list playlist !", 'lw', 'r'))
+                    return False
+                if len(commands) > 1:
+                    numbers = commands[1].split(' ')
+                    debug(numbers = numbers, debug = True)
+                for nn in numbers:
+                    command_execute("deleteid " + x[int(nn.strip()) - 1].get('id'), host, port)
         else:
             try:
                 x = getattr(CLIENT, commands[0])(*args)
@@ -544,7 +560,9 @@ def command_execute(commands, host=None, port=None):
         try:
             if x:
                 debug(x = x)
-                if 'find' in commands:
+                if 'delete' in commands or 'remove' in commands:
+                    pass
+                elif 'find' in commands:
                     x = organizer_album_by_artist(x)
                     debug(x = x)
                     # sys.exit()
@@ -661,23 +679,57 @@ def execute(host=None, port=None, commands=None):
         command_execute(q, host, port)
 
 def usage():
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    usage_txt = """mpdc.py [-h] [-H HOST] [-P PORT] [COMMANDS ...]
+
+    positional arguments:
+      COMMANDS              Commands, example: find artist coldplay"""
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, usage = usage_txt)
     parser.add_argument('-H', '--host', action='store', help='MPD HOST, default: 127.0.0.1', default='127.0.0.1', type=str)
     parser.add_argument('-P', '--port', action='store', help='MPD PORT, default: 6600', default=6600, type=int)
-    parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
+    #parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
     if len(sys.argv) == 1:
         parser.print_help()
+        print("\n")
         print("MPD_HOST (Environment): ", os.getenv('MPD_HOST'))
+        execute(None, None, ["playlist"])
     else:
-        args = parser.parse_args()
-        PORT = args.port
-        HOST = args.host
-        if HOST:
-            os.environ.update({'MPD_HOST': HOST,})
-        if PORT:
-            os.environ.update({'MPD_PORT': str(PORT),})
-        execute(args.host, args.port, args.COMMANDS)
+        direct = False
+        args = sys.argv[1:]
+        debug(args = args)
+        
+        for i in args:
+            if i == '-P' or i == '--port':
+                PORT = args[args.index(i) + 1]
+                if not PORT.isdigit():
+                    PORT = ''
+                args.remove(i)
+                args.remove(args[args.index(PORT)])
+                debug(PORT = PORT)
+                debug(args = args)
+        for i in args:
+            if i == '-H' or i == '--host':
+                HOST = args[args.index(i) + 1]
+                if not len(HOST.split(".")) == 4:
+                    HOST = ''
+                args.remove(i)
+                args.remove(args[args.index(HOST)])
+                debug(HOST = HOST)
 
+        debug(args = args)
+        if len(args) > 0:
+            parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
+            args = parser.parse_args()
+            PORT = args.port
+            HOST = args.host
+            if HOST:
+                os.environ.update({'MPD_HOST': HOST,})
+            if PORT:
+                os.environ.update({'MPD_PORT': str(PORT),})
+            execute(args.host, args.port, args.COMMANDS)
+        else:
+            os.environ.update({"HOST": HOST,})
+            os.environ.update({"PORT": PORT,})
+            execute(HOST, PORT, ["playlist"])
 
 if __name__ == '__main__':
     print("PID : ", os.getpid())
