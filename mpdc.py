@@ -153,12 +153,42 @@ def organizer_album_by_artist(results):
         #debug(i = i)
         if isinstance(i, list):
             for x in i:
-                albums.append((x.get('album'), x.get('artist'), x.get('disc'), os.path.dirname(x.get('file')), x.get('date')))
-        else:		
-            albums.append((i.get('album'), i.get('artist'), i.get('disc'), os.path.dirname(i.get('file')), i.get('date')))
+                album = x.get('album') or ''
+                artist = x.get('artist') or ''
+                disc = x.get('disc') or ''
+                file = x.get('file') or ''
+                if file:
+                    file = os.path.dirname(x.get('file'))
+                date = x.get('date') or ''
+                albums.append((album, artist, disc, file, date))
+        else:	
+            album = i.get('album') or ''
+            artist = i.get('artist') or ''
+            disc = i.get('disc') or ''
+            file = i.get('file') or ''
+            if file:
+                file = os.path.dirname(i.get('file'))
+            date = i.get('date') or ''            
+            albums.append((album, artist, disc, file, date))
         #paths.append(os.path.dirname(i.get(file)))
     debug(albums = albums)
-    album = sorted(set(albums))
+    try:
+        album = sorted(set(albums))
+    except:
+        debug(albums = albums)
+        album = []
+        album_str = ''
+        for ab in albums:
+            if not album_str == ab[3]:
+                album.append(ab)
+                album_str = ab[3]
+        try:
+            album = sorted(album)
+        except:
+            pause()
+            album = albums
+            print(traceback.format_exc())
+        
     debug(album = album)
     #album = albums
     # print("album =", album)
@@ -236,8 +266,7 @@ def navigator_find(x, host=None, clear=True):
         print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
         print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
     q = input(make_colors('Play Album or execute commands', 'b', 'ly') + ' ' + make_colors('[number: n1,n2,n4|n5|n7;n8,n10-n34][a] a = add only (no clear and play):', 'b', 'lg') + " ")
-    if q:
-        debug(ADD = ADD)
+    if q and q.isdigit() or (q[-1] == 'a' and q[:-1].isdigit()):
         if q[-1] == 'a':
             q = q[:-1]
             #global ADD
@@ -278,6 +307,12 @@ def navigator_find(x, host=None, clear=True):
     #    list_q = re.split(" |-|,|\|\.", q)
     #    list_q = [d.strip() for d in list_q]
     #    print("list_q =", list_q)
+    elif q == 'x' or q == 'q' or q == 'exit' or q == 'quit':
+        pass
+    else:
+        if q:
+            return command_execute(q)
+            
 def format_current(playname, len_x):
     artist = playname.get('artist')
     albumartist = playname.get('albumartist')
@@ -538,9 +573,16 @@ def command_execute(commands, host=None, port=None):
                 n = int(n)
                 n += 1
             qp = input(make_colors('Play musics', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
-            if qp:
+            if qp and qp.isdigit():
                 if qp.strip().isdigit() and int(qp.strip()) < len(x):
                     return command_execute(["play", str(int(qp.strip()))])
+            elif qp == 'x' or qp == 'q' or qp == 'exit' or qp == 'quit':
+                sys.exit()
+            else:
+                if qp:
+                    return command_execute(qp)
+                else:
+                    sys.exit()
             
         elif 'delete' in commands or 'remove' in commands:
             all_numbers = []
@@ -560,7 +602,7 @@ def command_execute(commands, host=None, port=None):
                         else:
                             all_numbers.append(n)
             all_numbers = list(set(sorted(all_numbers)))
-            debug(all_numbers = all_numbers)
+            debug(all_numbers = all_numbers, debug = True)
             
             if all_numbers:
                 try:
@@ -569,7 +611,12 @@ def command_execute(commands, host=None, port=None):
                     print(make_colors("[delete] Error get list playlist !", 'lw', 'r'))
                     return False
                 for nn in all_numbers:
-                    command_execute("deleteid " + x[nn - 1].get('id'), host, port)
+                    #command_execute("deleteid " + x[nn - 1].get('id'), host, port)
+                    try:
+                        getattr(CLIENT, "deleteid")(x[nn - 1].get('id'))
+                    except:
+                        CLIENT = conn(host, port)
+                        getattr(CLIENT, "deleteid")(x[nn - 1].get('id'))
         else:
             try:
                 x = getattr(CLIENT, commands[0])(*args)
@@ -631,14 +678,17 @@ def command_execute(commands, host=None, port=None):
             print("_" * ((cmdw.getWidth() * 2) - 2))
             qp = input(make_colors('Play musics of number or execute commands, [q]uit|e[x]it = quit/exit', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
             if qp and str(qp).isdigit():
-                if qp.strip().isdigit() and int(qp.strip()) < len(x):
+                if qp.strip().isdigit() and int(qp.strip()) <= len(x):
                     return command_execute(["play", str(int(qp.strip()))])
                 else:
                     return command_execute(qp)
             elif qp == 'x' or qp == 'q' or qp == 'exit' or qp == 'quit':
-                sys.exit()
+                return
             else:
-                sys.exit()
+                if qp:
+                    return command_execute(qp)
+                else:
+                    return
         elif 'next' in commands or 'prev' in commands:
             x = getattr(CLIENT, commands[0])()
             debug(x = x)
