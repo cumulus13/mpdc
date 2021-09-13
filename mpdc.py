@@ -41,6 +41,8 @@ else:
 # print("PORT:", PORT)
 CLIENT = ''
 ADD = False
+FIRST = False
+CALL_PLAYLIST = False
 import time
 import cmdw
 from pydebugger.debug import debug
@@ -392,6 +394,7 @@ def format_playlist(playname, len_x):
     return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "] [" + make_colors("ID:" + str(id), 'b', 'lc') + "]"
 
 def command_execute(commands, host=None, port=None):
+    global FIRST
     debug(commands = commands)
     debug(ADD = ADD)
     debug(host = host)
@@ -408,8 +411,10 @@ def command_execute(commands, host=None, port=None):
             port = os.getenv('MPD_PORT')
     debug(host = host)
     debug(port = port)
-    print(make_colors("command_execute HOST:", 'lw', 'bl') + " " + make_colors(host, 'b', 'y'))
-    print(make_colors("command_execute PORT:", 'lw', '1r') + " " + make_colors(str(port), 'b', 'lc'))
+    if not FIRST:
+        print(make_colors("command_execute HOST:", 'lw', 'bl') + " " + make_colors(host, 'b', 'y'))
+        print(make_colors("command_execute PORT:", 'lw', '1r') + " " + make_colors(str(port), 'b', 'lc'))
+        FIRST = True
     n_list = 10
     x_find = False
     #debug('commands_execute')
@@ -430,7 +435,8 @@ def command_execute(commands, host=None, port=None):
         if i[0] == 'N' and i[1].isdigit():
             n_list = int(i[1:])
             commands.remove(i)
-    print("COMMAND :", " ".join(commands))
+    if not 'deleteid' == commands[0]:
+        print("COMMAND :", " ".join(commands))
     debug(ADD = ADD)
     if len(commands) > 1:
         args = tuple(commands[1:])
@@ -510,6 +516,8 @@ def command_execute(commands, host=None, port=None):
                 x_find = True
                 debug(x = x)
         elif 'playlist' in commands:
+            global CALL_PLAYLIST
+            CALL_PLAYLIST = True
             try:
                 x = getattr(CLIENT, "playlistid")(*args)
             except:
@@ -538,12 +546,12 @@ def command_execute(commands, host=None, port=None):
             all_numbers = []
             if len(commands) > 1:
                 numbers = list(filter(None, re.split(" |,|#|\|", commands[1])))
-                debug(numbers = numbers, debug = True)
+                debug(numbers = numbers)
                 if numbers:
                     for n in numbers:
                         if "-" in n:
                             num_range = re.split("-", n.strip())
-                            debug(num_range = num_range, debug = True)
+                            debug(num_range = num_range)
                             num_range = list(range(int(num_range[0].strip()), int(num_range[1].strip()) + 1))
                             debug(num_range = num_range)
                             if num_range:
@@ -561,7 +569,7 @@ def command_execute(commands, host=None, port=None):
                     print(make_colors("[delete] Error get list playlist !", 'lw', 'r'))
                     return False
                 for nn in all_numbers:
-                    command_execute("deleteid " + x[int(nn.strip()) - 1].get('id'), host, port)
+                    command_execute("deleteid " + x[nn - 1].get('id'), host, port)
         else:
             try:
                 x = getattr(CLIENT, commands[0])(*args)
@@ -602,6 +610,7 @@ def command_execute(commands, host=None, port=None):
         # print("#"*cmdw.getWidth())
     else:
         if 'playlist' in commands:
+            CALL_PLAYLIST = True
             x = getattr(CLIENT, "playlistid")()
             debug(x = x)
             len_x = len(x)
@@ -620,12 +629,16 @@ def command_execute(commands, host=None, port=None):
             print("-" * ((cmdw.getWidth() * 2) - 2))
             print(make_colors("current playing:", 'r', 'lw') + " " + format_current(currentsong, len_x))
             print("_" * ((cmdw.getWidth() * 2) - 2))
-            qp = input(make_colors('Play musics of number or execute commands', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
-            if qp:
+            qp = input(make_colors('Play musics of number or execute commands, [q]uit|e[x]it = quit/exit', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
+            if qp and str(qp).isdigit():
                 if qp.strip().isdigit() and int(qp.strip()) < len(x):
                     return command_execute(["play", str(int(qp.strip()))])
                 else:
                     return command_execute(qp)
+            elif qp == 'x' or qp == 'q' or qp == 'exit' or qp == 'quit':
+                sys.exit()
+            else:
+                sys.exit()
         elif 'next' in commands or 'prev' in commands:
             x = getattr(CLIENT, commands[0])()
             debug(x = x)
@@ -668,6 +681,12 @@ def command_execute(commands, host=None, port=None):
                 else:
                     print(x)
             # print("#"*cmdw.getWidth())
+    if CALL_PLAYLIST:
+        try:
+            command_execute("playlist", host, port)
+        except:
+            pass
+        
 
 def execute(host=None, port=None, commands=None):
     debug(commands=commands)
