@@ -535,18 +535,32 @@ def command_execute(commands, host=None, port=None):
                     return command_execute(["play", str(int(qp.strip()))])
             
         elif 'delete' in commands or 'remove' in commands:
-            numbers = list(filter(None, commands[1].split(' ')))
-            debug(numbers = numbers, debug = True)
-            if numbers:
+            all_numbers = []
+            if len(commands) > 1:
+                numbers = list(filter(None, re.split(" |,|#|\|", commands[1])))
+                debug(numbers = numbers, debug = True)
+                if numbers:
+                    for n in numbers:
+                        if "-" in n:
+                            num_range = re.split("-", n.strip())
+                            debug(num_range = num_range, debug = True)
+                            num_range = list(range(int(num_range[0].strip()), int(num_range[1].strip()) + 1))
+                            debug(num_range = num_range)
+                            if num_range:
+                                all_numbers += num_range
+                            debug(all_numbers)
+                        else:
+                            all_numbers.append(n)
+            all_numbers = list(set(sorted(all_numbers)))
+            debug(all_numbers = all_numbers)
+            
+            if all_numbers:
                 try:
                     x = getattr(CLIENT, "playlistid")()
                 except:
                     print(make_colors("[delete] Error get list playlist !", 'lw', 'r'))
                     return False
-                if len(commands) > 1:
-                    numbers = commands[1].split(' ')
-                    debug(numbers = numbers, debug = True)
-                for nn in numbers:
+                for nn in all_numbers:
                     command_execute("deleteid " + x[int(nn.strip()) - 1].get('id'), host, port)
         else:
             try:
@@ -561,7 +575,7 @@ def command_execute(commands, host=None, port=None):
             if x:
                 debug(x = x)
                 if 'delete' in commands or 'remove' in commands:
-                    pass
+                    command_execute("playlist")
                 elif 'find' in commands:
                     x = organizer_album_by_artist(x)
                     debug(x = x)
