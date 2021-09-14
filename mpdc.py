@@ -42,7 +42,6 @@ else:
 CLIENT = ''
 ADD = False
 FIRST = False
-CALL_PLAYLIST = False
 import time
 import cmdw
 from pydebugger.debug import debug
@@ -231,8 +230,22 @@ def organizer_album_by_artist(results):
     #print ("album_paths =", album_paths)
     return album_paths
 
-def navigator_find(x, host=None, clear=True):
-    # print ("x =", x)
+def navigator_find(x, host=None, port = None, clear=True):
+    debug(host = host)
+    debug(port = port)
+    if not host:
+        if config.get_config('server', 'host'):
+            host = config.get_config('server', 'host')
+        if os.getenv('MPD_HOST'):
+            host = os.getenv('MPD_HOST')
+    if not port:
+        if config.get_config('server', 'port'):
+            port = config.get_config('server', 'port')
+        if os.getenv('MPD_PORT'):
+            port = os.getenv('MPD_PORT')
+    debug(host = host)
+    debug(port = port)
+    
     ADD = False
     play_root=False
     #multiplay=False
@@ -266,11 +279,11 @@ def navigator_find(x, host=None, clear=True):
         print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
         print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
     q = input(make_colors('Play Album or execute commands', 'b', 'ly') + ' ' + make_colors('[number: n1,n2,n4|n5|n7;n8,n10-n34][a] a = add only (no clear and play):', 'b', 'lg') + " ")
-    if q and q.isdigit() or (q[-1] == 'a' and q[:-1].isdigit()):
-        if q[-1] == 'a':
-            q = q[:-1]
-            #global ADD
+    if q:
+        if q[-1] == 'a' and q[:-1].isdigit():
+            q = q[:-1].isdigit()
             ADD = True
+    if q and q.isdigit():
         if clear and not ADD and str(q).isdigit():
             command_execute('clear', host)
         if "," in q or "|" in q or ";" in q:
@@ -301,6 +314,11 @@ def navigator_find(x, host=None, clear=True):
                     command_execute('play')
                 # global ADD
                 ADD = False
+                try:
+                    command_execute("playlist", host, port)
+                except:
+                    print(traceback.format_exc())
+                    pass
             else:
                 return command_execute(q)
     #elif q and (" " in q or "," in q or "." in q or "|" in q or "-" in q):
@@ -312,7 +330,7 @@ def navigator_find(x, host=None, clear=True):
     else:
         if q:
             return command_execute(q)
-            
+        
 def format_current(playname, len_x):
     artist = playname.get('artist')
     albumartist = playname.get('albumartist')
@@ -551,8 +569,6 @@ def command_execute(commands, host=None, port=None):
                 x_find = True
                 debug(x = x)
         elif 'playlist' in commands:
-            global CALL_PLAYLIST
-            CALL_PLAYLIST = True
             try:
                 x = getattr(CLIENT, "playlistid")(*args)
             except:
@@ -584,7 +600,7 @@ def command_execute(commands, host=None, port=None):
                 else:
                     sys.exit()
             
-        elif 'delete' in commands or 'remove' in commands:
+        elif 'delete' in commands or 'remove' in commands or 'del' in commands or 'rm' in commands:
             all_numbers = []
             if len(commands) > 1:
                 numbers = list(filter(None, re.split(" |,|#|\|", commands[1])))
@@ -602,7 +618,7 @@ def command_execute(commands, host=None, port=None):
                         else:
                             all_numbers.append(n)
             all_numbers = list(set(sorted(all_numbers)))
-            debug(all_numbers = all_numbers, debug = True)
+            debug(all_numbers = all_numbers)
             
             if all_numbers:
                 try:
@@ -621,6 +637,7 @@ def command_execute(commands, host=None, port=None):
             try:
                 x = getattr(CLIENT, commands[0])(*args)
             except:
+                print(traceback.format_exc())
                 print(make_colors("[else] Command Errors !", 'lw', 'r'))
                 return False                
         # if x_find:
@@ -629,7 +646,7 @@ def command_execute(commands, host=None, port=None):
         try:
             if x:
                 debug(x = x)
-                if 'delete' in commands or 'remove' in commands:
+                if 'delete' in commands or 'remove' in commands or 'del' in commands or 'rm' in commands:
                     command_execute("playlist")
                 elif 'find' in commands:
                     x = organizer_album_by_artist(x)
@@ -657,7 +674,6 @@ def command_execute(commands, host=None, port=None):
         # print("#"*cmdw.getWidth())
     else:
         if 'playlist' in commands:
-            CALL_PLAYLIST = True
             x = getattr(CLIENT, "playlistid")()
             debug(x = x)
             len_x = len(x)
@@ -688,7 +704,7 @@ def command_execute(commands, host=None, port=None):
                 if qp:
                     return command_execute(qp)
                 else:
-                    return
+                    return command_execute('playlist')
         elif 'next' in commands or 'prev' in commands:
             x = getattr(CLIENT, commands[0])()
             debug(x = x)
@@ -716,6 +732,7 @@ def command_execute(commands, host=None, port=None):
         else:
             debug(commands = commands)
             x = getattr(CLIENT, commands[0])()
+            debug(x = x)
             if x:
                 if isinstance(x, dict):
                     for r in x:
@@ -730,13 +747,7 @@ def command_execute(commands, host=None, port=None):
                             print("-" * cmdw.getWidth())
                 else:
                     print(x)
-            # print("#"*cmdw.getWidth())
-    if CALL_PLAYLIST:
-        try:
-            command_execute("playlist", host, port)
-        except:
-            pass
-        
+            # print("#"*cmdw.getWidth())    
 
 def execute(host=None, port=None, commands=None):
     debug(commands=commands)
