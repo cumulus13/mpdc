@@ -596,9 +596,11 @@ def command_execute(commands, host=None, port=None):
                 sys.exit()
             else:
                 if qp:
-                    return command_execute(qp)
+                    command_execute(qp)
+                    return command_execute('playlist')
                 else:
-                    sys.exit()
+                    #sys.exit()
+                    return command_execute('playlist')
             
         elif 'delete' in commands or 'remove' in commands or 'del' in commands or 'rm' in commands:
             all_numbers = []
@@ -702,7 +704,8 @@ def command_execute(commands, host=None, port=None):
                 return
             else:
                 if qp:
-                    return command_execute(qp)
+                    command_execute(qp)
+                    return command_execute('playlist')
                 else:
                     return command_execute('playlist')
         elif 'next' in commands or 'prev' in commands:
