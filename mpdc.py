@@ -488,7 +488,7 @@ class MPDC(object):
         debug(commands=commands)
         if 'album' in commands or 'find' in commands:
             commands = str(commands).strip().split(' ', 2)
-        elif 'add' in commands or 'remove' in commands or 'delete' in commands:
+        elif 'add' in commands or 'remove' in commands or 'delete' in commands or 'update' in commands:
             commands = str(commands).strip().split(' ', 1)
         else:
             commands = str(commands).strip().split(' ')
@@ -501,6 +501,7 @@ class MPDC(object):
         if not 'deleteid' == commands[0]:
             print("COMMAND :", " ".join(commands))
         debug(ADD = self.ADD)
+        x = ''
         if len(commands) > 1:
             args = tuple(commands[1:])
             debug(args = args)
