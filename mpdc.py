@@ -23,30 +23,11 @@ import re
 import random
 
 class MPDC(object):
-    HOST = '127.0.0.1'
-    PORT = 6600
+    HOST = ''
+    PORT = ''
     configname = os.path.join(os.path.relpath(os.path.dirname(__file__)), 'mpdc.ini')
     config = configset(configname)
     #config.configname = configname
-    if config.read_config('server', 'host', value = '127.0.0.1'):
-        HOST = config.read_config('server', 'host', value = '127.0.0.1')
-    if config.read_config('server', 'port', value = '6600'):
-        PORT = config.read_config('server', 'host', value = '6600')
-        if PORT and str(PORT).isdigit():
-            PORT = int(PORT)
-        else:
-            PORT = 6600
-    if os.getenv('MPD_HOST'):
-        HOST = os.getenv('MPD_HOST')
-    else:
-        HOST = '127.0.0.1'
-    if os.getenv('MPD_PORT'):
-        PORT = os.getenv('MPD_PORT')
-    else:
-        PORT = '6600'
-
-    # print("HOST:", HOST)
-    # print("PORT:", PORT)
     CLIENT = ''
     ADD = False
     FIRST = False
@@ -62,6 +43,41 @@ class MPDC(object):
         self.PORT = port or self.PORT
         self.config.configname = configfile or self.config.configname
 
+    @classmethod
+    def ver_host(self, host = None, port = None):
+        if self.HOST and self.PORT:
+            return self.HOST, self.PORT
+        debug(host = host)
+        debug(port = port)
+        #pause()
+        if not host:
+            if os.getenv('MPD_HOST'):
+                host = os.getenv('MPD_HOST')
+        if not port:
+            if os.getenv('MPD_PORT'):
+                port = os.getenv('MPD_PORT')
+        if not host:
+            if self.config.read_config('server', 'host', value = '127.0.0.1'):
+                host = self.config.read_config('server', 'host', value = '127.0.0.1')
+        if not port:
+            if self.config.read_config('server', 'port', value = '6600'):
+                port = self.config.read_config('server', 'host', value = '6600')
+                if port and str(port).isdigit():
+                    port = int(port)
+                else:
+                    port = 6600
+        
+        host = host or '127.0.0.1'
+        port = port or 6601
+        debug(host = host)
+        debug(port = port)
+        #pause()
+        if not self.HOST:
+            self.HOST = host
+        if not self.PORT:
+            self.PORT = port
+        return host, port
+    
     @classmethod
     def setColor(self, bg):
         if bg == 'y' or bg == 'ly' or bg == 'yellow' or bg == 'lightyellow':
@@ -113,24 +129,11 @@ class MPDC(object):
     
     @classmethod
     def hostport_confirm(self, host = None, port = None):
-        host = host or self.HOST
-        port = port or self.PORT
-        if not host:
-            if self.config.get_config('server', 'host'):
-                host = self.config.get_config('server', 'host')
-            if os.getenv('MPD_HOST'):
-                host = os.getenv('MPD_HOST')
-        if not port:
-            if self.config.get_config('server', 'port'):
-                port = self.config.get_config('server', 'port')
-            if os.getenv('MPD_PORT'):
-                port = os.getenv('MPD_PORT')
-        return host, port
+        return self.ver_host(host, port)
     
     @classmethod
     def conn(self, host=None, port=None, max_try=10):
-        host = host or self.hostport_confirm(host, port)[0]
-        port = port or self.hostport_confirm(host, port)[1]
+        host, port = self.ver_host(host, port)
         error = False
         nt = 0
         mpd_client = mpd.MPDClient()
@@ -469,11 +472,10 @@ class MPDC(object):
     def command_execute(self, commands, host=None, port=None):
         debug(commands = commands)
         debug(ADD = self.ADD)
-        host = host or self.hostport_confirm(host, port)[0]
-        port = port or self.hostport_confirm(host, port)[1]
+        host, port = self.hostport_confirm(host, port)
         debug(host = host)
         debug(port = port)
-        
+        #pause()
         if not self.FIRST:
             print(make_colors("command_execute HOST:", 'lw', 'bl') + " " + make_colors(host, 'b', 'y'))
             print(make_colors("command_execute PORT:", 'lw', '1r') + " " + make_colors(str(port), 'b', 'lc'))
@@ -779,6 +781,7 @@ class MPDC(object):
     
     @classmethod
     def execute(self, host=None, port=None, commands=None):
+        host, port = self.ver_host(host, port)
         debug(commands=commands)
         if not commands:
             q = input('FUNCTION: ')
@@ -803,13 +806,15 @@ class MPDC(object):
     
     @classmethod
     def usage(self):
+        HOST = self.HOST
+        PORT = self.PORT
         usage_txt = """mpdc.py [-h] [-H HOST] [-P PORT] [COMMANDS ...]
     
         positional arguments:
           COMMANDS              Commands, example: find artist coldplay"""
         parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, usage = usage_txt)
-        parser.add_argument('-H', '--host', action='store', help='MPD HOST, default: 127.0.0.1', default='127.0.0.1', type=str)
-        parser.add_argument('-P', '--port', action='store', help='MPD PORT, default: 6600', default=6600, type=int)
+        parser.add_argument('-H', '--host', action='store', help='MPD HOST, default: 127.0.0.1', type=str)
+        parser.add_argument('-P', '--port', action='store', help='MPD PORT', type=int)
         #parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
         if len(sys.argv) == 1:
             parser.print_help()
@@ -843,16 +848,15 @@ class MPDC(object):
             if len(args) > 0:
                 parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
                 args = parser.parse_args()
-                PORT = args.port
-                HOST = args.host
-                if HOST:
-                    os.environ.update({'MPD_HOST': HOST,})
-                if PORT:
-                    os.environ.update({'MPD_PORT': str(PORT),})
-                self.execute(args.host, args.port, args.COMMANDS)
+                PORT = args.port or PORT
+                HOST = args.host or HOST
+                HOST, PORT = self.ver_host(HOST, PORT)
+                os.environ.update({"HOST": str(HOST),})
+                os.environ.update({"PORT": str(PORT),})                
+                self.execute(HOST, PORT, args.COMMANDS)
             else:
-                os.environ.update({"HOST": HOST,})
-                os.environ.update({"PORT": PORT,})
+                os.environ.update({"HOST": str(HOST),})
+                os.environ.update({"PORT": str(PORT),})                
                 self.execute(HOST, PORT, ["playlist"])
     
 if __name__ == '__main__':
