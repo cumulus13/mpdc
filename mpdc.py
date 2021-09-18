@@ -90,7 +90,6 @@ class MPDC(object):
             fg = 'lw'
         return fg, bg
     
-    
     @classmethod
     def makeList(self, alist, ncols, vertically=True, file=None):
         from distutils.version import StrictVersion # pep 386
@@ -114,7 +113,6 @@ class MPDC(object):
             t.add_row(c)
         print(t)
     
-    
     @classmethod
     def conn0(self, host=None, port=None, playlist="radio", columns=200):
         mpd_host = self.HOST
@@ -125,7 +123,6 @@ class MPDC(object):
         mpd_client.idletimeout = None
         mpd_client.connect(mpd_host, mpd_port)
         return mpd_client
-    
     
     @classmethod
     def hostport_confirm(self, host = None, port = None):
@@ -210,7 +207,7 @@ class MPDC(object):
             try:
                 album = sorted(album)
             except:
-                pause()
+                #pause()
                 album = albums
                 print(traceback.format_exc())
             
@@ -256,6 +253,39 @@ class MPDC(object):
         #print ("album_paths =", album_paths)
         return album_paths
     
+    @classmethod
+    def organizer_album_by_title(self, results, sort_by='title'):
+        # print ("results =", results[1])
+        error_sort = False
+        debug(results = results)
+        # pause()
+        try:
+            results = sorted(results, key=lambda k: k.get('title'))
+        except:
+            error_sort = True
+            results = sorted(results, key=lambda k: re.split("^\d\+. |^\d+ - ", os.path.basename(k.get('file')))[-1])
+
+        if not error_sort and sort_by == 'file':
+            results = sorted(results, key=lambda k: re.split("^\d\+. |^\d+ - ", os.path.basename(k.get('file')))[-1])
+                    
+        song_paths = {}
+        n = 0
+        for i in results:
+            # all_songs.append((file, album, artist, disc, date))
+            song_paths.update(
+                {
+                    n: {
+                            'album':i.get('album'),
+                            'artist':i.get('artist'),
+                            # 'path':os.path.dirname(x.get('file')),
+                            'path':i.get('file'),
+                            'year':i.get('date')
+                        }
+                }
+            )
+            n+=1
+        #print ("song_paths =", song_paths)
+        return song_paths
     
     @classmethod
     def navigator_find(self, x, host=None, port = None, clear=True):
@@ -279,7 +309,7 @@ class MPDC(object):
                     else:
                         path = x.get(int(q)).get('path')
                         debug(path=path)
-                        # pause()
+                        # #pause()
                         # print ("path 1 =",path)
                         self.command_execute('add %s'%(path))
                     #if not multiplay:
@@ -290,8 +320,20 @@ class MPDC(object):
         for i in x:
             year = x.get(i).get('year')
             if not year:
-                year = ''        
-            print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(x.get(i).get('album'), 'b', 'ly') + " " + make_colors("[" + year + "]", 'lw', 'm'))
+                year = ''
+            if isinstance(year, list):
+                year = list(filter(None, year))
+                year = list(set(year))
+                year = year[0]
+            album = x.get(i).get('album') or ''
+            artist = x.get(i).get('artist') or ''
+            path = x.get(i).get('path') or ''
+            debug(year = year)
+            debug(album = album)
+            debug(artist = artist)
+            debug(path = path)
+            
+            print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(album, 'b', 'ly') + " " + make_colors("[" + year + "]", 'lw', 'm'))
             print(" "*len(str(i)) + "  " + make_colors("Artist:", 'lg') + " " + make_colors(x.get(i).get('artist'), 'b', 'lg', ['bold', 'italic']))
             print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
             print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
@@ -347,8 +389,7 @@ class MPDC(object):
         else:
             if q:
                 return self.command_execute(q)
-            
-    
+                
     @classmethod
     def format_current(self, playname, len_x):
         artist = playname.get('artist')
@@ -393,11 +434,10 @@ class MPDC(object):
         else:
             return ''
         
-    
     @classmethod
     def format_playlist(self, playname, len_x):
         debug(playname = playname)
-        # pause()
+        # #pause()
         error = False    
         disc = "01"
         year = ''
@@ -431,6 +471,7 @@ class MPDC(object):
             if not disc:
                 disc = "01"
         elif isinstance(playname, dict):
+            debug(playname = playname)
             id = playname.get('id')
             artist = playname.get('artist')
             albumartist = playname.get('albumartist')
@@ -446,7 +487,10 @@ class MPDC(object):
                 disc = "01"
             else:
                 disc = "0" + playname.get('disc')
-            duration = "%2.2f"%(float(playname.get('duration')) / 60)
+            try:
+                duration = "%2.2f"%(float(playname.get('duration')) / 60)
+            except:
+                duration = ''
             filename = playname.get('file')
             if len(str(track)) == 1:
                 track = "0" + str(track)
@@ -467,7 +511,60 @@ class MPDC(object):
         if year:
             return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + " " + make_colors("(" + year + ")", 'b', 'lc') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
         return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "] [" + make_colors("ID:" + str(id), 'b', 'lc') + "]"
-    
+
+    # @classmethod
+    # def generate_pattern(self, data):
+        
+    #     pattern = []
+
+    #     data = data.split()
+    #     debug(data = data)
+    #     data0 = data
+    #     #upper to first word every space
+    #     for i in data:
+    #         index = data.index(i)
+    #         data_index = data[index]
+    #         debug(index = index)
+    #         data.remove(i)
+    #         data1 = data
+    #         data1.insert(index, i.upper())
+    #         debug(data1 = data1)
+    #         data1_add = " ".join(data1)
+    #         debug(data1_add = data1_add)
+    #         pattern.append(data1_add)
+    #         data.remove(data[index])
+    #         data.insert(index, data_index)
+    #         debug(data = data)
+    #         debug(data2 = data)
+    #         print("-"*100)
+    #         pause()
+    #     debug(patten = pattern)
+
+    #     #don't apply .title() for suffix/prefix/middle like "the", "to", etc
+    #     exclude = ['the', 'to', 'from', 'is', 'are', 'will', 'was', 'have', 'has', 'would', 'shall', 'it']
+    #     data = data.split()
+    #     debug(data = data)
+    #     data0 = data
+    #     for i in data:
+    #         index = data.index(i)
+    #         data_index = data[index]
+    #         debug(index = index)
+    #         data.remove(i)
+    #         data1 = data
+    #         data1.insert(index, i.upper())
+    #         debug(data1 = data1)
+    #         data1_add = " ".join(data1)
+    #         debug(data1_add = data1_add)
+    #         pattern.append(data1_add)
+    #         data.remove(data[index])
+    #         data.insert(index, data_index)
+    #         debug(data = data)
+    #         debug(data2 = data)
+    #         print("-"*100)
+    #         pause()
+    #     debug(patten = pattern)
+
+
     @classmethod
     def command_execute(self, commands, host=None, port=None):
         debug(commands = commands)
@@ -510,6 +607,8 @@ class MPDC(object):
             debug(commands = commands)
             if 'play' in commands:
                 if args[0].isdigit():
+                    y = None
+                    x = None
                     args = [str(int(args[0].strip()) - 1)]
                     print(make_colors("Playing track:", 'lw', 'bl') + " " + make_colors(str(int(args[0]) + 1), 'r', 'lw'))
                     try:
@@ -532,59 +631,150 @@ class MPDC(object):
                     else:
                         if x:
                             print(x)
+                        if y:
+                            print(y)
                 else:
                     print(make_colors("Failed to play number {}".format(args[0]), 'lw', 'r'))
-            elif 'album' in commands and 'find' in commands:
-                try:
-                    x = getattr(CLIENT, commands[0])(*args)
-                except:
-                    print(make_colors("[album] Command Errors !", 'lw', 'r'))
-                    if not self.CALL_PLAYLIST:
-                        return False
-                # debug(x = x)
-                # pause()
-                if not x:
-                    debug("not x")
-                    x = getattr(CLIENT, 'list')('album')
-                    debug(len_x = len(x))
-                    debug(commands_index_album_add = commands[commands.index('album') + 1].lower())
-                    x_find_album = []
-                    for i in x:
-                        if commands[commands.index('album') + 1].lower() in str(i.get('album')).lower().strip():
-                            debug(find = str(i.get('album')).lower().strip())
-                            debug(patten = commands[commands.index('album') + 1].lower())
-                            x1 = getattr(CLIENT, 'find')('album', i.get('album'))
-                            debug(x1 = x1)
-                            x_find_album.append(x1)
-                            debug(x_find_album = x_find_album)
-                    x = x_find_album
-                    x_find = True
-            elif 'artist' in commands and 'find' in commands:
-                try:
-                    x = getattr(CLIENT, commands[0])(*args)
-                except:
-                    print(make_colors("[artist] Command Errors !", 'lw', 'r'))
-                    if not self.CALL_PLAYLIST:
-                        return False
-                if not x:
-                    debug("not x")
-                    x = getattr(CLIENT, 'list')('artist')
+            if 'find' in commands:
+                if ('album' in commands and 'find' in commands) or 'albumartist' in commands and 'find' in commands:
+                    try:
+                        x = getattr(CLIENT, commands[0])(*args)
+                    except:
+                        print(make_colors("[album] Command Errors !", 'lw', 'r'))
+                        if not self.CALL_PLAYLIST:
+                            return False
                     # debug(x = x)
-                    # print ("XXX =", x)
-                    debug(len_x = len(x))
-                    debug(commands_index_album_add = commands[commands.index('artist') + 1].lower())
-                    x_find_artist = []
-                    for i in x:
-                        if commands[commands.index('artist') + 1].lower() in str(i.get('artist')).lower().strip():
-                            debug(find = str(i.get('artist')).lower().strip())
-                            debug(patten = commands[commands.index('artist') + 1].lower())
-                            x1 = getattr(CLIENT, 'find')('artist', i.get('artist'))
-                            debug(x1 = x1)
-                            x_find_artist.append(x1)
-                            debug(x_find_artist = x_find_artist)
-                    x = x_find_artist
-                    x_find = True
+                    # #pause()
+                    if not x:
+                        debug("not x")
+                        x = getattr(CLIENT, 'list')('album')
+                        debug(len_x = len(x))
+                        debug(commands_index_album_add = commands[commands.index('album') + 1].lower())
+                        x_find_album = []
+                        for i in x:
+                            if commands[commands.index('album') + 1].lower() in str(i.get('album')).lower().strip():
+                                debug(find = str(i.get('album')).lower().strip())
+                                debug(patten = commands[commands.index('album') + 1].lower())
+                                x1 = getattr(CLIENT, 'find')('album', i.get('album'))
+                                debug(x1 = x1)
+                                x_find_album.append(x1)
+                                debug(x_find_album = x_find_album)
+                        x = x_find_album
+                        x_find = True
+                elif ('title' in commands and 'find' in commands) or ('song' in commands and 'find' in commands) or ('composer' in commands and 'find' in commands):
+                    debug(commands = commands)
+                    all_songs = []
+                    if "song" in commands:
+                        index = commands.index("song")
+                        commands.remove("song")
+                        commands.insert(index, "title")
+                    args = list(args)
+                    if "song" in args:
+                        index = args.index("song")
+                        args.remove("song")
+                        args.insert(index, "title")
+                    args = tuple(args)
+                    debug(commands = commands)
+                    debug(args = args)
+                    #pause()
+                    try:
+                        x = getattr(CLIENT, commands[0])(*args)
+                    except:
+                        print(make_colors("[album] Command Errors !", 'lw', 'r'))
+                        if not self.CALL_PLAYLIST:
+                            return False
                     debug(x = x)
+                    # #pause()
+                    if not x:
+                        debug("not x")
+                        all_songs = []
+                        pattern = [commands[-1].capitalize(), commands[-1].title(), commands[-1].upper()]
+                        debug(patten = pattern)
+                        for i in pattern:
+                            debug(i = i)
+                            args = list(args)
+                            args.remove(args[-1])
+                            args.insert(1, i)
+                            args = tuple(args)
+                            debug(args = args)
+                            try:
+                                x = getattr(CLIENT, 'find')(*args)
+                                debug(x = x)
+                                # print ("XXX =", x)
+                            except:
+                                print(traceback.format_exc())
+                            if x:
+                                all_songs = all_songs + x
+                    debug(all_songs = all_songs)
+                    # pause()
+                    if all_songs:
+                        x = all_songs
+                
+                elif 'artist' in commands and 'find' in commands:
+                    try:
+                        x = getattr(CLIENT, commands[0])(*args)
+                        debug(x = x)
+                    except:
+                        print(make_colors("[artist] Command Errors !", 'lw', 'r'))
+                        if not self.CALL_PLAYLIST:
+                            return False
+                    if not x:
+                        debug("not x")
+                        #pause()
+                        x = getattr(CLIENT, 'list')('artist')
+                        # debug(x = x)
+                        # print ("XXX =", x)
+                        debug(len_x = len(x))
+                        debug(commands_index_album_add = commands[commands.index('artist') + 1].lower())
+                        x_find_artist = []
+                        for i in x:
+                            if commands[commands.index('artist') + 1].lower() in str(i.get('artist')).lower().strip():
+                                debug(find = str(i.get('artist')).lower().strip())
+                                debug(patten = commands[commands.index('artist') + 1].lower())
+                                x1 = getattr(CLIENT, 'find')('artist', i.get('artist'))
+                                debug(x1 = x1)
+                                x_find_artist.append(x1)
+                                debug(x_find_artist = x_find_artist)
+                        x = x_find_artist
+                        x_find = True
+                        debug(x = x)
+                else:
+                    args = list(args)
+                    if not 'any' in args:
+                        args.insert(0, 'any')
+                        args = tuple(args)
+                    try:
+                        debug(args = args)
+                        x = getattr(CLIENT, commands[0])(*args)
+                        debug(x = x)
+                    except:
+                        print(make_colors("[{}] Command Errors !".format(commands[0]), 'lw', 'r'))
+                        if not self.CALL_PLAYLIST:
+                            return False
+                    if not x:
+                        debug("not x")
+                        all_founds = []
+                        pattern = [commands[-1].capitalize(), commands[-1].title(), commands[-1].upper()]
+                        for i in pattern:
+                            debug(i = i)
+                            args = list(args)
+                            args.remove(args[-1])
+                            args.insert(1, i)
+                            args = tuple(args)
+                            debug(args = args)
+                            try:
+                                x = getattr(CLIENT, 'find')(*args)
+                                debug(x = x)
+                                # print ("XXX =", x)
+                            except:
+                                print(traceback.format_exc())
+                            if x:
+                                all_founds += x
+                    debug(all_founds = all_founds)
+                    #pause()
+                    if all_founds:
+                        x = all_founds
+                
             elif 'playlist' in commands:
                 if 'playlist' in commands:
                     self.CALL_PLAYLIST = True            
@@ -610,7 +800,22 @@ class MPDC(object):
                 qp = input(make_colors('Play musics', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
                 if qp and qp.isdigit():
                     if qp.strip().isdigit() and int(qp.strip()) < len(x):
-                        self.command_execute(["play", str(int(qp.strip()))])
+                        # self.command_execute(["play", str(int(qp.strip()))])
+                        en = 0
+                        en_max = 10
+                        while 1:
+                            try:
+                                x = getattr(CLIENT, "play")(str(int(qp.strip()) - 1),)
+                                break
+                            except:
+                                if not en == en_max:
+                                    en+=1
+                                    CLIENT = self.conn(host, port)
+                                else:
+                                    print(make_colors("ERROR Play track:", 'lw', 'r') + " " + make_colors(qp, 'lw', 'bl'))
+                                    time.sleep(1)
+                                    print("ERROR:", traceback.format_exc())
+                                    break
                         return self.command_execute('playlist')
                 elif qp == 'x' or qp == 'q' or qp == 'exit' or qp == 'quit':
                     sys.exit()
@@ -621,7 +826,6 @@ class MPDC(object):
                     else:
                         #sys.exit()
                         return self.command_execute('playlist')
-                
             elif 'delete' in commands or 'remove' in commands or 'del' in commands or 'rm' in commands:
                 all_numbers = []
                 if len(commands) > 1:
@@ -675,8 +879,15 @@ class MPDC(object):
                     if 'delete' in commands or 'remove' in commands or 'del' in commands or 'rm' in commands:
                         self.command_execute("playlist")
                     elif 'find' in commands:
-                        x = self.organizer_album_by_artist(x)
-                        debug(x = x)
+                        debug(commands = commands)
+                        # pause()
+                        if 'title' in commands:
+                            x = self.organizer_album_by_title(x)
+                        elif 'artist' in commands or 'albumartist' in commands or 'album' in commands:
+                            x = self.organizer_album_by_artist(x)
+                        else:
+                            x = self.organizer_album_by_title(x, 'file')
+                            debug(x = x)
                         # sys.exit()
                         self.navigator_find(x, host)
                     elif 'list' in commands:
@@ -722,7 +933,25 @@ class MPDC(object):
                 qp = input(make_colors('Play musics of number or execute commands, [q]uit|e[x]it = quit/exit', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
                 if qp and str(qp).isdigit():
                     if qp.strip().isdigit() and int(qp.strip()) <= len(x):
-                        self.command_execute(["play", str(int(qp.strip()))])
+                        # self.command_execute(["play", str(int(qp.strip()))])
+                        en = 0
+                        en_max = 10
+                        while 1:
+                            try:
+                                x = getattr(CLIENT, "play")(str(int(qp.strip()) - 1),)
+                                break
+                            except:
+                                if not en == en_max:
+                                    en+=1
+                                    try:
+                                        CLIENT = self.conn(host, port)
+                                    except:
+                                        pass
+                                else:
+                                    print(make_colors("ERROR Play track:", 'lw', 'r') + " " + make_colors(qp, 'lw', 'bl'))
+                                    time.sleep(1)
+                                    print("ERROR:", traceback.format_exc())
+                                    break
                         return self.command_execute('playlist')
                     else:
                         return self.command_execute(qp)
@@ -734,8 +963,27 @@ class MPDC(object):
                         return self.command_execute('playlist')
                     else:
                         return self.command_execute('playlist')
-            elif 'next' in commands or 'prev' in commands:
-                x = getattr(CLIENT, commands[0])()
+            elif 'next' in commands or 'prev' in commands or 'previous' in commands:
+                debug(commands = commands)
+                if 'prev' in commands:
+                    index = commands.index('prev')
+                    commands.remove('prev')
+                    commands.insert(index, 'previous')
+                debug(commands = commands)
+                try:
+                    x = getattr(CLIENT, commands[0])()
+                except:
+                    tp, vl, tb = sys.exc_info()
+                    mtype = tp.__module__
+                    mname = vl.__class__.__name__
+                    mesg = str(vl.with_traceback(tb))
+                    #print("TYPE:", mtype)
+                    #print("NAME:", mname)
+                    #print("MESG:", mesg)
+                    if "not playing" in str(mesg).lower():
+                        print(make_colors("MPD [{}:{}]".format(host, port), 'b', 'lc') + " " + make_colors("IS NOT PLAYING !", 'lw', 'r'))
+                    time.sleep(1)
+                    self.command_execute("playlist", host, port)
                 debug(x = x)
                 len_x = 1
                 if x:
@@ -777,7 +1025,6 @@ class MPDC(object):
                     else:
                         print(x)
                 # print("#"*cmdw.getWidth())    
-    
     
     @classmethod
     def execute(self, host=None, port=None, commands=None):
@@ -861,6 +1108,7 @@ class MPDC(object):
     
 if __name__ == '__main__':
     print("PID : ", os.getpid())
+    # MPDC.generate_pattern("come to me")
     MPDC.usage()
     # print("MPD_HOST (Environment): ", os.getenv('MPD_HOST'))
     # print("len(sys.argv) =", len(sys.argv))
