@@ -252,6 +252,17 @@ class MPDC(object):
             n+=1
         #print ("album_paths =", album_paths)
         return album_paths
+
+    @classmethod
+    def format_number(self, number, length = 10):
+        number = str(number).strip()
+        if not str(number).isdigit():
+            return number
+        zeros = len(str(length)) - len(number)
+        r = ("0" * zeros) + str(number)
+        if len(r) == 1:
+            return "0" + r
+        return r
     
     @classmethod
     def organizer_album_by_title(self, results, sort_by='title'):
@@ -288,11 +299,14 @@ class MPDC(object):
         return song_paths
     
     @classmethod
-    def navigator_find(self, x, host=None, port = None, clear=True):
+    def navigator_find(self, x, host=None, port = None, clear=True, q = None):
+        debug(x = x)
+        # pause()
         host = host or self.hostport_confirm(host, port)[0]
         port = port or self.hostport_confirm(host, port)[1]
         debug(host = host)
         debug(port = port)
+        listit = False
         
         play_root=False
         #multiplay=False
@@ -317,33 +331,37 @@ class MPDC(object):
                         #command_execute('play')
         #debug(x = x)
         #pprint(x)
-        for i in x:
-            year = x.get(i).get('year')
-            if not year:
-                year = ''
-            if isinstance(year, list):
-                year = list(filter(None, year))
-                year = list(set(year))
-                year = year[0]
-            album = x.get(i).get('album') or ''
-            artist = x.get(i).get('artist') or ''
-            path = x.get(i).get('path') or ''
-            debug(year = year)
-            debug(album = album)
-            debug(artist = artist)
-            debug(path = path)
-            
-            print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(album, 'b', 'ly') + " " + make_colors("[" + year + "]", 'lw', 'm'))
-            print(" "*len(str(i)) + "  " + make_colors("Artist:", 'lg') + " " + make_colors(x.get(i).get('artist'), 'b', 'lg', ['bold', 'italic']))
-            print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
-            print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
-        q = input(make_colors('Play Album or execute commands', 'b', 'ly') + ' ' + make_colors('[number: n1,n2,n4|n5|n7;n8,n10-n34][a] a = add only (no clear and play):', 'b', 'lg') + " ")
+        if not q:
+            for i in x:
+                year = x.get(i).get('year')
+                if not year:
+                    year = ''
+                if isinstance(year, list):
+                    year = list(filter(None, year))
+                    year = list(set(year))
+                    year = year[0]
+                album = x.get(i).get('album') or ''
+                artist = x.get(i).get('artist') or ''
+                path = x.get(i).get('path') or ''
+                debug(year = year)
+                debug(album = album)
+                debug(artist = artist)
+                debug(path = path)
+                
+                print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(album, 'b', 'ly') + " " + make_colors("[" + year + "]", 'lw', 'm'))
+                print(" "*len(str(i)) + "  " + make_colors("Artist:", 'lg') + " " + make_colors(x.get(i).get('artist'), 'b', 'lg', ['bold', 'italic']))
+                print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
+                print("-----------------------" + ("-" * len(x.get(i).get('path'))) + "--")
+            q = input(make_colors('Play Album or execute commands', 'b', 'ly') + ' ' + make_colors('[number: n1,n2,n4|n5|n7;n8,n10-n34][a] a = add only (no clear and play):', 'b', 'lg') + " ")
         if q:
             if q[-1] == 'a' and q[:-1].isdigit():
                 q = q[:-1]
                 self.ADD = True
+            elif q[-1] == 'l' and q[:-1].isdigit():
+                q = q[:-1]
+                listit = True
         if q and q.isdigit():
-            if clear and not self.ADD and str(q).isdigit():
+            if clear and not self.ADD and str(q).isdigit() and not listit:
                 self.command_execute('clear', host)
             if "," in q or "|" in q or ";" in q:
                 #multiplay=True
@@ -366,6 +384,30 @@ class MPDC(object):
                     self.command_execute('play')
                 # global ADD
                 self.ADD = False
+            elif listit:
+                debug(x = x)
+                # data = x.get(int(q.strip()) - 1)
+                # debug(data = data)
+                path = x.get(int(q.strip()) - 1).get('path')
+                debug(path = path)
+                args = (path, )
+                data = self.re_execute("listall", args, None, host, port)
+                debug(data = data)
+                xdata = {}
+                n = 0
+                # pprint(data)
+                debug(test = [d.get('file') for d in data[1:]])
+                debug(test_max = max([d.get('file') for d in data[1:]]))
+                # pause()
+                print(make_colors("PATH:", 'y') + " " + make_colors(data[0].get('directory'), 'lw', 'm') + " :")
+                for i in data[1:]:
+                    xdata.update({n: {'path':i.get('file')}})
+                    n+= 1
+                    print(" "*4 + make_colors(self.format_number(n), 'lc') + ". " + make_colors(os.path.basename(i.get('file')), 'lw', 'bl', ['bold', 'italic']))
+                print("-"*len(os.path.basename(max([d.get('file') for d in data[1:]]))))
+                qp = input(make_colors('Play Song or execute commands', 'b', 'ly') + ' ' + make_colors('[number: n1,n2,n4|n5|n7;n8,n10-n34][a] a = add only (no clear and play):', 'b', 'lg') + " ")
+                if qp:
+                    return self.navigator_find(xdata, host, port, clear, qp)
             else:
                 if str(q).strip().isdigit():
                     executor(q)
@@ -511,60 +553,7 @@ class MPDC(object):
         if year:
             return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + " " + make_colors("(" + year + ")", 'b', 'lc') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
         return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "] [" + make_colors("ID:" + str(id), 'b', 'lc') + "]"
-
-    # @classmethod
-    # def generate_pattern(self, data):
-        
-    #     pattern = []
-
-    #     data = data.split()
-    #     debug(data = data)
-    #     data0 = data
-    #     #upper to first word every space
-    #     for i in data:
-    #         index = data.index(i)
-    #         data_index = data[index]
-    #         debug(index = index)
-    #         data.remove(i)
-    #         data1 = data
-    #         data1.insert(index, i.upper())
-    #         debug(data1 = data1)
-    #         data1_add = " ".join(data1)
-    #         debug(data1_add = data1_add)
-    #         pattern.append(data1_add)
-    #         data.remove(data[index])
-    #         data.insert(index, data_index)
-    #         debug(data = data)
-    #         debug(data2 = data)
-    #         print("-"*100)
-    #         pause()
-    #     debug(patten = pattern)
-
-    #     #don't apply .title() for suffix/prefix/middle like "the", "to", etc
-    #     exclude = ['the', 'to', 'from', 'is', 'are', 'will', 'was', 'have', 'has', 'would', 'shall', 'it']
-    #     data = data.split()
-    #     debug(data = data)
-    #     data0 = data
-    #     for i in data:
-    #         index = data.index(i)
-    #         data_index = data[index]
-    #         debug(index = index)
-    #         data.remove(i)
-    #         data1 = data
-    #         data1.insert(index, i.upper())
-    #         debug(data1 = data1)
-    #         data1_add = " ".join(data1)
-    #         debug(data1_add = data1_add)
-    #         pattern.append(data1_add)
-    #         data.remove(data[index])
-    #         data.insert(index, data_index)
-    #         debug(data = data)
-    #         debug(data2 = data)
-    #         print("-"*100)
-    #         pause()
-    #     debug(patten = pattern)
-
-
+    
     @classmethod
     def command_execute(self, commands, host=None, port=None):
         debug(commands = commands)
@@ -698,7 +687,8 @@ class MPDC(object):
                             args = tuple(args)
                             debug(args = args)
                             try:
-                                x = getattr(CLIENT, 'find')(*args)
+                                # x = getattr(CLIENT, 'find')(*args)
+                                x = self.re_execute('find', args, CLIENT, host, port)
                                 debug(x = x)
                                 # print ("XXX =", x)
                             except:
@@ -889,7 +879,7 @@ class MPDC(object):
                             x = self.organizer_album_by_title(x, 'file')
                             debug(x = x)
                         # sys.exit()
-                        self.navigator_find(x, host)
+                        self.navigator_find(x, host, port)
                     elif 'list' in commands:
                         x2 = []
                         for i in x:
@@ -1049,7 +1039,24 @@ class MPDC(object):
                 self.command_execute(str(i).strip(), host, port)
         else:
             self.command_execute(q, host, port)
-    
+
+    @classmethod
+    def re_execute(self, command, args = (), CLIENT = None, host = None, port = None):
+        if not CLIENT:
+            CLIENT = self.conn(host, port)
+        host, port = self.ver_host(host, port)
+        if not args:
+            args = ()
+        x = None
+        while 1:
+            try:
+                x = getattr(CLIENT, command)(*args)
+                break
+            except:
+                tp, vl, tb = sys.exc_info()
+                if vl.__class__.__name__ == 'OSError' and str(vl.with_traceback(tb)) == "cannot read from timed out object":
+                    CLIENT = self.conn(host, port)
+        return x    
     
     @classmethod
     def usage(self):
