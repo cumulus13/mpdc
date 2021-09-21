@@ -300,6 +300,7 @@ class MPDC(object):
     
     @classmethod
     def navigator_find(self, x, host=None, port = None, clear=True, q = None):
+        ADD_ALL = False
         debug(x = x)
         # pause()
         host = host or self.hostport_confirm(host, port)[0]
@@ -357,6 +358,8 @@ class MPDC(object):
             if q[-1] == 'a' and q[:-1].isdigit():
                 q = q[:-1]
                 self.ADD = True
+            elif q == 'a':
+                ADD_ALL = True
             elif q[-1] == 'l' and q[:-1].isdigit():
                 q = q[:-1]
                 listit = True
@@ -428,6 +431,14 @@ class MPDC(object):
         #    print("list_q =", list_q)
         elif q == 'x' or q == 'q' or q == 'exit' or q == 'quit':
             pass
+        elif ADD_ALL:
+            for i in x:
+                executor(str(i + 1))
+            try:
+                self.command_execute("playlist", host, port)
+            except:
+                print(traceback.format_exc())
+                pass
         else:
             if q:
                 return self.command_execute(q)
@@ -764,7 +775,6 @@ class MPDC(object):
                     #pause()
                     if all_founds:
                         x = all_founds
-                
             elif 'playlist' in commands:
                 if 'playlist' in commands:
                     self.CALL_PLAYLIST = True            
