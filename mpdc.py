@@ -162,7 +162,7 @@ class MPDC(object):
         return mpd_client
     
     @classmethod
-    def organizer_album_by_artist(self, results):
+    def organizer_album_by_artist(self, results, albumartist = False):
         # print ("results =", results[1])
         debug(results = results)
         albums = []
@@ -176,13 +176,19 @@ class MPDC(object):
             if isinstance(i, list):
                 for x in i:
                     album = x.get('album') or ''
-                    artist = x.get('artist') or ''
+                    if albumartist:
+                        artist = x.get('albumartist') or ''
+                    else:
+                        artist = x.get('artist') or ''
                     disc = x.get('disc') or ''
                     file = x.get('file') or ''
                     if file:
                         file = os.path.dirname(x.get('file'))
                     date = x.get('date') or ''
-                    albums.append((album, artist, disc, file, date))
+                    if albumartist:
+                        albums.append((album, artist, disc, file, date))
+                    else:
+                        albums.append((album, artist, disc, file, date))
             else:	
                 album = i.get('album') or ''
                 artist = i.get('artist') or ''
@@ -471,7 +477,7 @@ class MPDC(object):
         elif len(str(track)) == 1 and len(str(len_x)) == 3:
             track = "00" + str(track)                                
         elif len(str(track)) == 2 and len(str(len_x)) == 3:
-            n = "0" + str(n)
+            track = "0" + str(track)
         if title:
             return make_colors(artist, 'lw', 'bl') + " - " +\
                    make_colors(album, 'lw', 'm') + "/" +\
@@ -545,12 +551,15 @@ class MPDC(object):
             except:
                 duration = ''
             filename = playname.get('file')
+            debug(title = title)
+            if not title:
+                title = ''
             if len(str(track)) == 1:
                 track = "0" + str(track)
             elif len(str(track)) == 1 and len(str(len_x)) == 3:
                 track = "00" + str(track)                                
             elif len(str(track)) == 2 and len(str(len_x)) == 3:
-                n = "0" + str(n)                                                        
+                track = "0" + str(track)                                                        
             return make_colors(artist, 'lw', 'bl') + " - " +\
                    make_colors(album, 'lw', 'm') + "/" +\
                    make_colors(albumartist, 'lw', 'm') + " " +\
@@ -640,22 +649,30 @@ class MPDC(object):
                     try:
                         x = getattr(CLIENT, commands[0])(*args)
                     except:
-                        print(make_colors("[album] Command Errors !", 'lw', 'r'))
-                        if not self.CALL_PLAYLIST:
-                            return False
-                    # debug(x = x)
-                    # #pause()
+                        try:
+                            x = self.re_execute(commands, args, host = host, port = port)
+                        except:
+                            print(make_colors("[album] Command Errors !", 'lw', 'r'))
+                            if not self.CALL_PLAYLIST:
+                                return False
+                    debug(x = x)
+                    # pause()
                     if not x:
                         debug("not x")
-                        x = getattr(CLIENT, 'list')('album')
+                        debug(join_commands = " ".join(commands))
+                        album_str = re.findall('find (album.*?) ', " ".join(commands))[0]
+                        debug(album_str = album_str)
+                        # x = getattr(CLIENT, 'list')(album_str)
+                        # def re_execute(self, command, args = (), CLIENT = None, host = None, port = None):
+                        x = self.re_execute('list', (album_str), host = host, port = port)
                         debug(len_x = len(x))
-                        debug(commands_index_album_add = commands[commands.index('album') + 1].lower())
+                        debug(commands_index_album_add = commands[commands.index(album_str) + 1].lower())
                         x_find_album = []
                         for i in x:
-                            if commands[commands.index('album') + 1].lower() in str(i.get('album')).lower().strip():
-                                debug(find = str(i.get('album')).lower().strip())
-                                debug(patten = commands[commands.index('album') + 1].lower())
-                                x1 = getattr(CLIENT, 'find')('album', i.get('album'))
+                            if commands[commands.index(album_str) + 1].lower() in str(i.get(album_str)).lower().strip():
+                                debug(find = str(i.get(album_str)).lower().strip())
+                                debug(patten = commands[commands.index(album_str) + 1].lower())
+                                x1 = getattr(CLIENT, 'find')(album_str, i.get(album_str))
                                 debug(x1 = x1)
                                 x_find_album.append(x1)
                                 debug(x_find_album = x_find_album)
@@ -722,7 +739,10 @@ class MPDC(object):
                     if not x:
                         debug("not x")
                         #pause()
-                        x = getattr(CLIENT, 'list')('artist')
+                        try:
+                            x = getattr(CLIENT, 'list')('artist')
+                        except:
+                            x = self.re_execute('list', ('artist'), None, host, port)
                         # debug(x = x)
                         # print ("XXX =", x)
                         debug(len_x = len(x))
@@ -870,9 +890,7 @@ class MPDC(object):
                     print(make_colors("[else] Command Errors !", 'lw', 'r'))
                     if not self.CALL_PLAYLIST:
                         return False                
-            # if x_find:
-            # 	x = organizer_album_by_artist(x)
-            # else:
+            
             try:
                 if x:
                     debug(x = x)
@@ -884,7 +902,10 @@ class MPDC(object):
                         if 'title' in commands:
                             x = self.organizer_album_by_title(x)
                         elif 'artist' in commands or 'albumartist' in commands or 'album' in commands:
-                            x = self.organizer_album_by_artist(x)
+                            if 'albumartist' in commands:
+                                x = self.organizer_album_by_artist(x, True)
+                            else:
+                                x = self.organizer_album_by_artist(x)
                         else:
                             x = self.organizer_album_by_title(x, 'file')
                             debug(x = x)
