@@ -1091,6 +1091,11 @@ class MPDC(object):
     
     @classmethod
     def usage(self):
+        print("\n")
+        print("#############################################")
+        print("#           MPDc by LICFACE                 #")
+        print("#############################################")
+        print("\n")
         HOST = self.HOST
         PORT = self.PORT
         usage_txt = """mpdc.py [-h] [-H HOST] [-P PORT] [COMMANDS ...]
@@ -1101,8 +1106,9 @@ class MPDC(object):
         parser.add_argument('-H', '--host', action='store', help='MPD HOST, default: 127.0.0.1', type=str)
         parser.add_argument('-P', '--port', action='store', help='MPD PORT', type=int)
         #parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
-        if len(sys.argv) == 1:
+        if len(sys.argv) == 1 or sys.argv == ['-h'] or sys.argv == ['--help']:
             parser.print_help()
+            print("MPDc by LICFACE")
             print("\n")
             print("MPD_HOST (Environment): ", os.getenv('MPD_HOST'))
             self.execute(None, None, ["playlist"])
