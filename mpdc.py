@@ -366,34 +366,15 @@ class MPDC(object):
                 self.ADD = True
             elif q == 'a':
                 ADD_ALL = True
+            elif q[-1:] == 'a':
+                q = q[:-1]
+                self.ADD = True
             elif q[-1] == 'l' and q[:-1].isdigit():
                 q = q[:-1]
                 listit = True
+        debug(q = q)
         if q and q.isdigit():
-            if clear and not self.ADD and str(q).isdigit() and not listit:
-                self.command_execute('clear', host)
-            if "," in q or "|" in q or ";" in q:
-                #multiplay=True
-                q1 = re.split(",| |;|\|", q)
-                debug(q1=q1)
-                # print("q1 =", q1)
-                q2 = []
-                for i in q1:
-                    if "-" in i:
-                        fr,to = re.split("-", i)
-                        if fr.isdigit() and to.isdigit():
-                            q2+= range(abs(int(fr.strip()) - 1), int(to.strip()) + 1)
-                    if not str(i).strip() == '':
-                        q2.append(i)
-                    if str(i).strip() == '-1':
-                        play_root=True
-                for i in q2:
-                    executor(i)
-                if not self.ADD:
-                    self.command_execute('play')
-                # global ADD
-                self.ADD = False
-            elif listit:
+            if listit:
                 debug(x = x)
                 # data = x.get(int(q.strip()) - 1)
                 # debug(data = data)
@@ -435,8 +416,33 @@ class MPDC(object):
         #    list_q = re.split(" |-|,|\|\.", q)
         #    list_q = [d.strip() for d in list_q]
         #    print("list_q =", list_q)
+
+        elif "," in q or "|" in q or ";" in q:
+            if clear and not self.ADD and str(q).isdigit() and not listit:
+                self.command_execute('clear', host)
+            #multiplay=True
+            q1 = re.split(",| |;|\|", q)
+            debug(q1=q1)
+            # print("q1 =", q1)
+            q2 = []
+            for i in q1:
+                if "-" in i:
+                    fr,to = re.split("-", i)
+                    if fr.isdigit() and to.isdigit():
+                        q2+= range(abs(int(fr.strip()) - 1), int(to.strip()) + 1)
+                if not str(i).strip() == '':
+                    q2.append(i)
+                if str(i).strip() == '-1':
+                    play_root=True
+            debug(q2 = q2)
+            for i in q2:
+                executor(i)
+            if not self.ADD:
+                self.command_execute('play')
+            # global ADD
+            self.ADD = False
         elif q == 'x' or q == 'q' or q == 'exit' or q == 'quit':
-            pass
+            sys.exit()
         elif ADD_ALL:
             for i in x:
                 executor(str(i + 1))
@@ -733,9 +739,13 @@ class MPDC(object):
                         x = getattr(CLIENT, commands[0])(*args)
                         debug(x = x)
                     except:
-                        print(make_colors("[artist] Command Errors !", 'lw', 'r'))
-                        if not self.CALL_PLAYLIST:
-                            return False
+                        try:
+                            x = self.re_execute(commands[0], (args), None, host, port)
+                        except:
+                            print(make_colors("ERROR:", 'lw', 'r'), " ", make_colors(traceback.format_exc(), 'b', 'bl'))
+                            print(make_colors("[artist] Command Errors !", 'lw', 'r'))
+                            if not self.CALL_PLAYLIST:
+                                return False
                     if not x:
                         debug("not x")
                         #pause()
@@ -769,9 +779,13 @@ class MPDC(object):
                         x = getattr(CLIENT, commands[0])(*args)
                         debug(x = x)
                     except:
-                        print(make_colors("[{}] Command Errors !".format(commands[0]), 'lw', 'r'))
-                        if not self.CALL_PLAYLIST:
-                            return False
+                        try:
+                            x = self.re_execute(commands[0], (args), None, host, port)
+                        except:
+                            print(make_colors("ERROR:", 'lw', 'r'), " ", make_colors(traceback.format_exc(), 'b', 'bl'))
+                            print(make_colors("[{}] Command Errors !".format(commands[0]), 'lw', 'r'))
+                            if not self.CALL_PLAYLIST:
+                                return False
                     if not x:
                         debug("not x")
                         all_founds = []
