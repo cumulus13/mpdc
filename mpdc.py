@@ -962,9 +962,9 @@ class MPDC(object):
                     n = int(n)
                     n += 1
                 currentsong = getattr(CLIENT, "currentsong")()
-                print("-" * ((cmdw.getWidth() * 2) - 2))
+                print("-" * cmdw.getWidth())
                 print(make_colors("current playing:", 'r', 'lw') + " " + self.format_current(currentsong, len_x))
-                print("_" * ((cmdw.getWidth() * 2) - 2))
+                print("_" * cmdw.getWidth())
                 qp = input(make_colors('Play musics of number or execute commands, [q]uit|e[x]it = quit/exit', 'b', 'ly') + ' ' + make_colors('[number]:', 'b', 'lg') + " ")
                 if qp and str(qp).isdigit():
                     if qp.strip().isdigit() and int(qp.strip()) <= len(x):
