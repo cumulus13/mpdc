@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python3
 
 try:    
     from pause import pause
@@ -23,11 +23,12 @@ import re
 import random
 
 class MPDC(object):
-    HOST = ''
-    PORT = ''
     configname = os.path.join(os.path.relpath(os.path.dirname(__file__)), 'mpdc.ini')
+    debug(configname = configname, debug = True)
     config = configset(configname)
     #config.configname = configname
+    HOST = config.get_config('server', 'host') or ''
+    PORT = config.get_config('server', 'port') or 6600
     CLIENT = ''
     ADD = False
     FIRST = False
@@ -45,36 +46,32 @@ class MPDC(object):
 
     @classmethod
     def ver_host(self, host = None, port = None):
+        debug(host = host)
+        debug(port = port)
+        debug(self_HOST = self.HOST)
+        debug(self_PORT = self.PORT)
+        #pause()
         if self.HOST and self.PORT:
+            host = self.HOST
+            port = self.PORT
+            debug(host = host)
+            debug(port = port)
+            # #pause()
             return self.HOST, self.PORT
         debug(host = host)
         debug(port = port)
-        #pause()
+        # #pause()
         if not host:
-            if os.getenv('MPD_HOST'):
-                host = os.getenv('MPD_HOST')
+            host = self.HOST or os.getenv('MPD_HOST') or '127.0.0.1'
         if not port:
-            if os.getenv('MPD_PORT'):
-                port = os.getenv('MPD_PORT')
-        if not host:
-            if self.config.read_config('server', 'host', value = '127.0.0.1'):
-                host = self.config.read_config('server', 'host', value = '127.0.0.1')
-        if not port:
-            if self.config.read_config('server', 'port', value = '6600'):
-                port = self.config.read_config('server', 'host', value = '6600')
-                if port and str(port).isdigit():
-                    port = int(port)
-                else:
-                    port = 6600
+            port = self.PORT or os.getenv('MPD_PORT') or 6600
         
-        host = host or '127.0.0.1'
-        port = port or 6601
         debug(host = host)
         debug(port = port)
-        #pause()
-        if not self.HOST:
+        # #pause()
+        if not self.HOST and host:
             self.HOST = host
-        if not self.PORT:
+        if not self.PORT and port:
             self.PORT = port
         return host, port
     
@@ -126,6 +123,9 @@ class MPDC(object):
     
     @classmethod
     def hostport_confirm(self, host = None, port = None):
+        debug(host = host)
+        debug(port = port)
+        #pause()
         return self.ver_host(host, port)
     
     @classmethod
@@ -213,7 +213,7 @@ class MPDC(object):
             try:
                 album = sorted(album)
             except:
-                #pause()
+                ##pause()
                 album = albums
                 print(traceback.format_exc())
             
@@ -275,7 +275,7 @@ class MPDC(object):
         # print ("results =", results[1])
         error_sort = False
         debug(results = results)
-        # pause()
+        # #pause()
         try:
             results = sorted(results, key=lambda k: k.get('title'))
         except:
@@ -308,7 +308,7 @@ class MPDC(object):
     def navigator_find(self, x, host=None, port = None, clear=True, q = None):
         ADD_ALL = False
         debug(x = x)
-        # pause()
+        # #pause()
         host = host or self.hostport_confirm(host, port)[0]
         port = port or self.hostport_confirm(host, port)[1]
         debug(host = host)
@@ -330,7 +330,7 @@ class MPDC(object):
                     else:
                         path = x.get(int(q)).get('path')
                         debug(path=path)
-                        # #pause()
+                        # ##pause()
                         # print ("path 1 =",path)
                         self.command_execute('add %s'%(path))
                     #if not multiplay:
@@ -388,7 +388,7 @@ class MPDC(object):
                 # pprint(data)
                 debug(test = [d.get('file') for d in data[1:]])
                 debug(test_max = max([d.get('file') for d in data[1:]]))
-                # pause()
+                # #pause()
                 print(make_colors("PATH:", 'y') + " " + make_colors(data[0].get('directory'), 'lw', 'm') + " :")
                 for i in data[1:]:
                     xdata.update({n: {'path':i.get('file')}})
@@ -502,7 +502,7 @@ class MPDC(object):
     @classmethod
     def format_playlist(self, playname, len_x):
         debug(playname = playname)
-        # #pause()
+        # ##pause()
         error = False    
         disc = "01"
         year = ''
@@ -550,6 +550,8 @@ class MPDC(object):
             disc = playname.get('disc')
             if not disc:
                 disc = "01"
+            elif disc == "None":
+                disc = "01"
             else:
                 disc = "0" + playname.get('disc')
             try:
@@ -587,7 +589,7 @@ class MPDC(object):
         host, port = self.hostport_confirm(host, port)
         debug(host = host)
         debug(port = port)
-        #pause()
+        ##pause()
         if not self.FIRST:
             print(make_colors("command_execute HOST:", 'lw', 'bl') + " " + make_colors(host, 'b', 'y'))
             print(make_colors("command_execute PORT:", 'lw', '1r') + " " + make_colors(str(port), 'b', 'lc'))
@@ -662,7 +664,7 @@ class MPDC(object):
                             if not self.CALL_PLAYLIST:
                                 return False
                     debug(x = x)
-                    # pause()
+                    # #pause()
                     if not x:
                         debug("not x")
                         debug(join_commands = " ".join(commands))
@@ -699,7 +701,7 @@ class MPDC(object):
                     args = tuple(args)
                     debug(commands = commands)
                     debug(args = args)
-                    #pause()
+                    ##pause()
                     try:
                         x = getattr(CLIENT, commands[0])(*args)
                     except:
@@ -707,7 +709,7 @@ class MPDC(object):
                         if not self.CALL_PLAYLIST:
                             return False
                     debug(x = x)
-                    # #pause()
+                    # ##pause()
                     if not x:
                         debug("not x")
                         all_songs = []
@@ -730,7 +732,7 @@ class MPDC(object):
                             if x:
                                 all_songs = all_songs + x
                     debug(all_songs = all_songs)
-                    # pause()
+                    # #pause()
                     if all_songs:
                         x = all_songs
                 
@@ -748,7 +750,7 @@ class MPDC(object):
                                 return False
                     if not x:
                         debug("not x")
-                        #pause()
+                        ##pause()
                         try:
                             x = getattr(CLIENT, 'list')('artist')
                         except:
@@ -806,7 +808,7 @@ class MPDC(object):
                             if x:
                                 all_founds += x
                     debug(all_founds = all_founds)
-                    #pause()
+                    ##pause()
                     if all_founds:
                         x = all_founds
             elif 'playlist' in commands:
@@ -880,7 +882,7 @@ class MPDC(object):
                 debug(all_numbers = all_numbers)
                 all_numbers = list(set(sorted(all_numbers)))
                 debug(all_numbers = all_numbers)
-                #pause()
+                ##pause()
                 if all_numbers:
                     try:
                         x = getattr(CLIENT, "playlistid")()
@@ -912,7 +914,7 @@ class MPDC(object):
                         self.command_execute("playlist")
                     elif 'find' in commands:
                         debug(commands = commands)
-                        # pause()
+                        # #pause()
                         if 'title' in commands:
                             x = self.organizer_album_by_title(x)
                         elif 'artist' in commands or 'albumartist' in commands or 'album' in commands:
@@ -1063,7 +1065,10 @@ class MPDC(object):
     
     @classmethod
     def execute(self, host=None, port=None, commands=None):
+        debug(host = host)
+        debug(port = port)
         host, port = self.ver_host(host, port)
+        # #pause()
         debug(commands=commands)
         if not commands:
             q = input('FUNCTION: ')
