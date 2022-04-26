@@ -1,6 +1,6 @@
 #!python
 
-try:    
+try:
     from pause import pause
 except:
     def pause(*args, **kwargs):
@@ -36,7 +36,7 @@ class MPDC(object):
     diplay_columns = ''
     stations = ''
     CLIENT = None
-    
+
     def __init__(self, host = None, port = None, configfile = None):
         super(MPDC, self).__init__()
         self.HOST = host or self.HOST
@@ -66,7 +66,7 @@ class MPDC(object):
                     port = int(port)
                 else:
                     port = 6600
-        
+
         host = host or '127.0.0.1'
         port = port or 6601
         debug(host = host)
@@ -77,7 +77,7 @@ class MPDC(object):
         if not self.PORT:
             self.PORT = port
         return host, port
-    
+
     @classmethod
     def setColor(self, bg):
         if bg == 'y' or bg == 'ly' or bg == 'yellow' or bg == 'lightyellow':
@@ -89,13 +89,13 @@ class MPDC(object):
         else:
             fg = 'lw'
         return fg, bg
-    
+
     @classmethod
     def makeList(self, alist, ncols, vertically=True, file=None):
         from distutils.version import StrictVersion # pep 386
         import prettytable as ptt # pip install prettytable
         import sys
-        assert StrictVersion(ptt.__version__) >= StrictVersion('0.7') # for PrettyTable.vrules property        
+        assert StrictVersion(ptt.__version__) >= StrictVersion('0.7') # for PrettyTable.vrules property
         L = alist
         nrows = - ((-len(L)) // ncols)
         ncols = - ((-len(L)) // nrows)
@@ -112,7 +112,7 @@ class MPDC(object):
         for c in chunks:
             t.add_row(c)
         print(t)
-    
+
     @classmethod
     def conn0(self, host=None, port=None, playlist="radio", columns=200):
         mpd_host = self.HOST
@@ -123,11 +123,11 @@ class MPDC(object):
         mpd_client.idletimeout = None
         mpd_client.connect(mpd_host, mpd_port)
         return mpd_client
-    
+
     @classmethod
     def hostport_confirm(self, host = None, port = None):
         return self.ver_host(host, port)
-    
+
     @classmethod
     def conn(self, host=None, port=None, max_try=10):
         host, port = self.ver_host(host, port)
@@ -160,7 +160,7 @@ class MPDC(object):
         mpd_client.timeout = 20
         mpd_client.idletimeout = None
         return mpd_client
-    
+
     @classmethod
     def organizer_album_by_artist(self, results, albumartist = False):
         # print ("results =", results[1])
@@ -189,14 +189,14 @@ class MPDC(object):
                         albums.append((album, artist, disc, file, date))
                     else:
                         albums.append((album, artist, disc, file, date))
-            else:	
+            else:
                 album = i.get('album') or ''
                 artist = i.get('artist') or ''
                 disc = i.get('disc') or ''
                 file = i.get('file') or ''
                 if file:
                     file = os.path.dirname(i.get('file'))
-                date = i.get('date') or ''            
+                date = i.get('date') or ''
                 albums.append((album, artist, disc, file, date))
             #paths.append(os.path.dirname(i.get(file)))
         debug(albums = albums)
@@ -216,7 +216,7 @@ class MPDC(object):
                 #pause()
                 album = albums
                 print(traceback.format_exc())
-            
+
         debug(album = album)
         #album = albums
         # print("album =", album)
@@ -237,7 +237,7 @@ class MPDC(object):
                                 }
                             )
                             # n+=1
-                            break		
+                            break
                 else:
                     if x.get('album') == i[0]:
                         if not os.path.dirname(x.get('file')) == file_album_path:
@@ -253,7 +253,7 @@ class MPDC(object):
                                 'year':i[4]
                             }
                         })
-                            
+
             #break
             n+=1
         #print ("album_paths =", album_paths)
@@ -269,7 +269,7 @@ class MPDC(object):
         if len(r) == 1:
             return "0" + r
         return r
-    
+
     @classmethod
     def organizer_album_by_title(self, results, sort_by='title'):
         # print ("results =", results[1])
@@ -284,7 +284,7 @@ class MPDC(object):
 
         if not error_sort and sort_by == 'file':
             results = sorted(results, key=lambda k: re.split("^\d\+. |^\d+ - ", os.path.basename(k.get('file')))[-1])
-                    
+
         song_paths = {}
         n = 0
         for i in results:
@@ -303,7 +303,7 @@ class MPDC(object):
             n+=1
         #print ("song_paths =", song_paths)
         return song_paths
-    
+
     @classmethod
     def navigator_find(self, x, host=None, port = None, clear=True, q = None):
         ADD_ALL = False
@@ -314,7 +314,7 @@ class MPDC(object):
         debug(host = host)
         debug(port = port)
         listit = False
-        
+
         play_root=False
         #multiplay=False
         def executor(q):
@@ -354,7 +354,7 @@ class MPDC(object):
                 debug(album = album)
                 debug(artist = artist)
                 debug(path = path)
-                
+
                 print(str(i + 1) + ". " + make_colors("Album :", 'y') + " " + make_colors(album, 'b', 'ly') + " " + make_colors("[" + year + "]", 'lw', 'm'))
                 print(" "*len(str(i)) + "  " + make_colors("Artist:", 'lg') + " " + make_colors(x.get(i).get('artist'), 'b', 'lg', ['bold', 'italic']))
                 print(" "*len(str(i)) + "  " + make_colors("Path  :", 'lc') + " " + make_colors(x.get(i).get('path'), 'lw', 'lr', ['bold', 'italic']))
@@ -454,7 +454,7 @@ class MPDC(object):
         else:
             if q:
                 return self.command_execute(q)
-                
+
     @classmethod
     def format_current(self, playname, len_x):
         artist = playname.get('artist')
@@ -481,7 +481,7 @@ class MPDC(object):
         if len(str(track)) == 1:
             track = "0" + str(track)
         elif len(str(track)) == 1 and len(str(len_x)) == 3:
-            track = "00" + str(track)                                
+            track = "00" + str(track)
         elif len(str(track)) == 2 and len(str(len_x)) == 3:
             track = "0" + str(track)
         if title:
@@ -498,12 +498,12 @@ class MPDC(object):
                    make_colors("ID:" + str(playname.get('id')), 'b', 'lc') + "]"
         else:
             return ''
-        
+
     @classmethod
     def format_playlist(self, playname, len_x):
         debug(playname = playname)
         # #pause()
-        error = False    
+        error = False
         disc = "01"
         year = ''
         if isinstance(playname, str):
@@ -525,7 +525,7 @@ class MPDC(object):
                     path, artist, album, year, track, title = data.match(playname).groups()
                 except:
                     #print("error:", traceback.format_exc())
-                    error = True            
+                    error = True
             #print("PLAYNAME =", playname)
             #print("DATA =", data)
             #print("ARTIST:", artist)
@@ -550,6 +550,8 @@ class MPDC(object):
             disc = playname.get('disc')
             if not disc:
                 disc = "01"
+            elif disc == "None":
+                disc = "01"
             else:
                 disc = "0" + playname.get('disc')
             try:
@@ -563,9 +565,9 @@ class MPDC(object):
             if len(str(track)) == 1:
                 track = "0" + str(track)
             elif len(str(track)) == 1 and len(str(len_x)) == 3:
-                track = "00" + str(track)                                
+                track = "00" + str(track)
             elif len(str(track)) == 2 and len(str(len_x)) == 3:
-                track = "0" + str(track)                                                        
+                track = "0" + str(track)
             return make_colors(artist, 'lw', 'bl') + " - " +\
                    make_colors(album, 'lw', 'm') + "/" +\
                    make_colors(albumartist, 'lw', 'm') + " " +\
@@ -579,7 +581,7 @@ class MPDC(object):
         if year:
             return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + " " + make_colors("(" + year + ")", 'b', 'lc') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "]"
         return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "] [" + make_colors("ID:" + str(id), 'b', 'lc') + "]"
-    
+
     @classmethod
     def command_execute(self, commands, host=None, port=None):
         debug(commands = commands)
@@ -630,7 +632,7 @@ class MPDC(object):
                         x = getattr(CLIENT, commands[0])(*args)
                     except:
                         print(make_colors("[play] Command Errors !", 'lw', 'r'))
-                        if not self.CALL_PLAYLIST:    
+                        if not self.CALL_PLAYLIST:
                             return False
                     try:
                         y = getattr(CLIENT, commands[0])(*args)
@@ -733,7 +735,7 @@ class MPDC(object):
                     # pause()
                     if all_songs:
                         x = all_songs
-                
+
                 elif 'artist' in commands and 'find' in commands:
                     try:
                         x = getattr(CLIENT, commands[0])(*args)
@@ -811,7 +813,7 @@ class MPDC(object):
                         x = all_founds
             elif 'playlist' in commands:
                 if 'playlist' in commands:
-                    self.CALL_PLAYLIST = True            
+                    self.CALL_PLAYLIST = True
                 try:
                     x = getattr(CLIENT, "playlistid")(*args)
                 except:
@@ -824,9 +826,9 @@ class MPDC(object):
                     if len(str(n)) == 1 and len(str(len_x)) == 2:
                         n = "0" + str(n)
                     elif len(str(n)) == 1 and len(str(len_x)) == 3:
-                        n = "00" + str(n)                                
+                        n = "00" + str(n)
                     elif len(str(n)) == 2 and len(str(len_x)) == 3:
-                        n = "0" + str(n)                                
+                        n = "0" + str(n)
                     #print (str(n) + ". " + i)
                     print (make_colors(str(n), 'bl') + ". " + self.format_playlist(i, len_x))
                     n = int(n)
@@ -903,8 +905,8 @@ class MPDC(object):
                     print(traceback.format_exc())
                     print(make_colors("[else] Command Errors !", 'lw', 'r'))
                     if not self.CALL_PLAYLIST:
-                        return False                
-            
+                        return False
+
             try:
                 if x:
                     debug(x = x)
@@ -930,10 +932,10 @@ class MPDC(object):
                         for i in x:
                             if isinstance(i, dict):
                                 if i.get('artist'):
-                                    x2.append(str(x.index(i)) + ". " + i.get('artist'))        
+                                    x2.append(str(x.index(i)) + ". " + i.get('artist'))
                             else:
                                 x2.append(str(x.index(i)) + ". " + i)
-                            
+
                         self.makeList(x2, n_list)
                     else:
                         if isinstance(x, dict):
@@ -955,9 +957,9 @@ class MPDC(object):
                     if len(str(n)) == 1:
                         n = "0" + str(n)
                     elif len(str(n)) == 1 and len(str(len_x)) == 3:
-                        n = "00" + str(n)                                
+                        n = "00" + str(n)
                     elif len(str(n)) == 2 and len(str(len_x)) == 3:
-                        n = "0" + str(n)                                                
+                        n = "0" + str(n)
                     print (make_colors(str(n), 'bl') + ". " + self.format_playlist(i, len_x))
                     n = int(n)
                     n += 1
@@ -998,13 +1000,32 @@ class MPDC(object):
                         return self.command_execute('playlist')
                     else:
                         return self.command_execute('playlist')
-            elif 'next' in commands or 'prev' in commands or 'previous' in commands:
-                debug(commands = commands)
+            elif 'next' in commands or 'prev' in commands or 'previous' in commands or 'n' in commands or 'p' in commands:
+
                 if 'prev' in commands:
+                    index = None
                     index = commands.index('prev')
                     commands.remove('prev')
                     commands.insert(index, 'previous')
+                elif 'p' in commands:
+                    index = None
+                    index = commands.index('p')
+                    commands.remove('p')
+                    commands.insert(index, 'previous')
+                elif 'next' in commands:
+                    debug(commands = commands)
+                    index = None
+                    index = commands.index('next')
+                    commands.remove('next')
+                    commands.insert(index, 'next')
+                elif 'n' in commands:
+                    debug(commands = commands)
+                    index = None
+                    index = commands.index('n')
+                    commands.remove('n')
+                    commands.insert(index, 'next')
                 debug(commands = commands)
+
                 try:
                     x = getattr(CLIENT, commands[0])()
                 except:
@@ -1036,9 +1057,9 @@ class MPDC(object):
                         if len(str(n)) == 1:
                             n = "0" + str(n)
                         elif len(str(n)) == 1 and len(str(len_x)) == 3:
-                            n = "00" + str(n)                                
+                            n = "00" + str(n)
                         elif len(str(n)) == 2 and len(str(len_x)) == 3:
-                            n = "0" + str(n)                                                
+                            n = "0" + str(n)
                         print (make_colors(str(n), 'bl') + ". " + make_colors(i.get('playlist'), 'b', 'y') + " [" + make_colors(i.get('last-modified'), 'lw', 'm') + "]")
                     print("\n")
             else:
@@ -1059,8 +1080,8 @@ class MPDC(object):
                                 print("-" * cmdw.getWidth())
                     else:
                         print(x)
-                # print("#"*cmdw.getWidth())    
-    
+                # print("#"*cmdw.getWidth())
+
     @classmethod
     def execute(self, host=None, port=None, commands=None):
         host, port = self.ver_host(host, port)
@@ -1101,8 +1122,8 @@ class MPDC(object):
                 tp, vl, tb = sys.exc_info()
                 if vl.__class__.__name__ == 'OSError' and str(vl.with_traceback(tb)) == "cannot read from timed out object":
                     CLIENT = self.conn(host, port)
-        return x    
-    
+        return x
+
     @classmethod
     def usage(self):
         print("\n")
@@ -1113,7 +1134,7 @@ class MPDC(object):
         HOST = self.HOST
         PORT = self.PORT
         usage_txt = """mpdc.py [-h] [-H HOST] [-P PORT] [COMMANDS ...]
-    
+
         positional arguments:
           COMMANDS              Commands, example: find artist coldplay"""
         parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, usage = usage_txt)
@@ -1130,7 +1151,7 @@ class MPDC(object):
             direct = False
             args = sys.argv[1:]
             debug(args = args)
-            
+
             for i in args:
                 if i == '-P' or i == '--port':
                     PORT = args[args.index(i) + 1]
@@ -1148,7 +1169,7 @@ class MPDC(object):
                     args.remove(i)
                     args.remove(args[args.index(HOST)])
                     debug(HOST = HOST)
-    
+
             debug(args = args)
             if len(args) > 0:
                 parser.add_argument("COMMANDS", action='store', help="Commands", nargs='*')
@@ -1157,13 +1178,13 @@ class MPDC(object):
                 HOST = args.host or HOST
                 HOST, PORT = self.ver_host(HOST, PORT)
                 os.environ.update({"HOST": str(HOST),})
-                os.environ.update({"PORT": str(PORT),})                
+                os.environ.update({"PORT": str(PORT),})
                 self.execute(HOST, PORT, args.COMMANDS)
             else:
                 os.environ.update({"HOST": str(HOST),})
-                os.environ.update({"PORT": str(PORT),})                
+                os.environ.update({"PORT": str(PORT),})
                 self.execute(HOST, PORT, ["playlist"])
-    
+
 if __name__ == '__main__':
     print("PID : ", os.getpid())
     # MPDC.generate_pattern("come to me")
@@ -1177,11 +1198,11 @@ if __name__ == '__main__':
     #         execute(commands=sys.argv[1:])
     # elif len(sys.argv) > 2:
     #     if len(str(sys.argv[1]).strip().split(".")) == 4:
-    #         #print("sys.argv[2:] =", sys.argv[2:]) 
+    #         #print("sys.argv[2:] =", sys.argv[2:])
     #         execute(host=sys.argv[1], commands=sys.argv[2:])
     #     else:
     #         # print("sys.argv[1:] =", sys.argv[1:])
-    #         execute(commands=sys.argv[1:])		
+    #         execute(commands=sys.argv[1:])
 
     # else:
     #     execute()
