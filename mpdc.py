@@ -49,7 +49,7 @@ class MPDC(object):
             return self.HOST, self.PORT
         debug(host = host)
         debug(port = port)
-        #pause()
+        ###pause()
         if not host:
             if os.getenv('MPD_HOST'):
                 host = os.getenv('MPD_HOST')
@@ -71,7 +71,7 @@ class MPDC(object):
         port = port or 6601
         debug(host = host)
         debug(port = port)
-        #pause()
+        ###pause()
         if not self.HOST:
             self.HOST = host
         if not self.PORT:
@@ -172,8 +172,10 @@ class MPDC(object):
         #debug(results = results)
         for i in results:
             #print ("i =",i)
-            #debug(i = i)
+            debug(i = i)
+            #pause()
             if isinstance(i, list):
+                # #pause()
                 for x in i:
                     album = x.get('album') or ''
                     if albumartist:
@@ -184,6 +186,7 @@ class MPDC(object):
                     file = x.get('file') or ''
                     if file:
                         file = os.path.dirname(x.get('file'))
+                    debug(file = file)
                     date = x.get('date') or ''
                     if albumartist:
                         albums.append((album, artist, disc, file, date))
@@ -200,6 +203,9 @@ class MPDC(object):
                 albums.append((album, artist, disc, file, date))
             #paths.append(os.path.dirname(i.get(file)))
         debug(albums = albums)
+        # pprint(albums)
+        #pause()
+
         try:
             album = sorted(set(albums))
         except:
@@ -213,7 +219,7 @@ class MPDC(object):
             try:
                 album = sorted(album)
             except:
-                #pause()
+                ###pause()
                 album = albums
                 print(traceback.format_exc())
 
@@ -275,7 +281,7 @@ class MPDC(object):
         # print ("results =", results[1])
         error_sort = False
         debug(results = results)
-        # pause()
+        ##pause()
         try:
             results = sorted(results, key=lambda k: k.get('title'))
         except:
@@ -308,7 +314,7 @@ class MPDC(object):
     def navigator_find(self, x, host=None, port = None, clear=True, q = None):
         ADD_ALL = False
         debug(x = x)
-        # pause()
+        #pause()
         host = host or self.hostport_confirm(host, port)[0]
         port = port or self.hostport_confirm(host, port)[1]
         debug(host = host)
@@ -328,11 +334,14 @@ class MPDC(object):
                         # print ("path 0 =",path)
                         self.command_execute('add %s'%(path))
                     else:
+                        debug(x = x)
+                        debug(x_get = x.get(int(q)))
                         path = x.get(int(q)).get('path')
                         debug(path=path)
-                        # #pause()
+                        #pause()
                         # print ("path 1 =",path)
                         self.command_execute('add %s'%(path))
+                        #pause()
                     #if not multiplay:
                     #if not ADD:
                         #command_execute('play')
@@ -388,7 +397,7 @@ class MPDC(object):
                 # pprint(data)
                 debug(test = [d.get('file') for d in data[1:]])
                 debug(test_max = max([d.get('file') for d in data[1:]]))
-                # pause()
+                # ##pause()
                 print(make_colors("PATH:", 'y') + " " + make_colors(data[0].get('directory'), 'lw', 'm') + " :")
                 for i in data[1:]:
                     xdata.update({n: {'path':i.get('file')}})
@@ -442,7 +451,7 @@ class MPDC(object):
             # global ADD
             self.ADD = False
         elif q == 'x' or q == 'q' or q == 'exit' or q == 'quit':
-            sys.exit()
+            sys.exit(1)
         elif ADD_ALL:
             for i in x:
                 executor(str(i + 1))
@@ -502,7 +511,7 @@ class MPDC(object):
     @classmethod
     def format_playlist(self, playname, len_x):
         debug(playname = playname)
-        # #pause()
+        # ###pause()
         error = False
         disc = "01"
         year = ''
@@ -589,7 +598,8 @@ class MPDC(object):
         host, port = self.hostport_confirm(host, port)
         debug(host = host)
         debug(port = port)
-        #pause()
+        use_filter = []
+        ###pause()
         if not self.FIRST:
             print(make_colors("command_execute HOST:", 'lw', 'bl') + " " + make_colors(host, 'b', 'y'))
             print(make_colors("command_execute PORT:", 'lw', '1r') + " " + make_colors(str(port), 'b', 'lc'))
@@ -603,7 +613,46 @@ class MPDC(object):
         debug(CLIENT = CLIENT)
         debug(commands=commands)
         if 'album' in commands or 'find' in commands:
+            if 'filter' in commands:
+                commands1 = str(commands).strip().split('filter')
+                debug(commands1 = commands1)
+                commands = commands1[0]
+                use_filter = commands1[1]
+                debug(use_filter = use_filter)
+                use_filter = re.findall("[aA-zZ+0-9]+", commands1[1])
+                debug(use_filter = use_filter)
+                if len(use_filter) > 2:
+                    commands = commands1[0] + " ".join(use_filter[2:])
+                    debug(commands = commands)
+                    use_filter = use_filter[-2:]
+                debug(use_filter = use_filter)
+                debug(commands = commands)
+
+            elif len(re.findall('find', commands)) > 1:
+                commands1 = list(filter(None, str(commands).strip().split('find')[:-1]))
+                debug(commands1 = commands1)
+
+                # use_filter = " ".join(str(commands).strip().split('find', 1)[1].split('find')).strip()
+                use_filter = list(filter(None, str(commands).strip().split('find', 1)[1].split('find')[1].strip().split(" ")))
+                debug(use_filter = use_filter)
+                # #pause()
+                # use_filter = re.findall("[aA-zZ+0-9]+", use_filter)
+                # debug(use_filter = use_filter)
+
+                commands = "find " + " ".join(commands1).strip()
+                debug(commands = commands)
+
+                if len(use_filter) > 2:
+                    commands = commands + " " + " ".join(use_filter[2:])
+                    debug(commands = commands)
+                    use_filter = use_filter[-2:]
+                debug(use_filter = use_filter)
+            debug(commands = commands)
+
+
             commands = str(commands).strip().split(' ', 2)
+            debug(commands = commands)
+            # #pause()
         elif 'add' in commands or 'remove' in commands or 'delete' in commands or 'update' in commands:
             commands = str(commands).strip().split(' ', 1)
         else:
@@ -622,6 +671,7 @@ class MPDC(object):
             args = tuple(commands[1:])
             debug(args = args)
             debug(commands = commands)
+            # #pause()
             if 'play' in commands:
                 if args[0].isdigit():
                     y = None
@@ -664,7 +714,7 @@ class MPDC(object):
                             if not self.CALL_PLAYLIST:
                                 return False
                     debug(x = x)
-                    # pause()
+                    # ##pause()
                     if not x:
                         debug("not x")
                         debug(join_commands = " ".join(commands))
@@ -701,7 +751,7 @@ class MPDC(object):
                     args = tuple(args)
                     debug(commands = commands)
                     debug(args = args)
-                    #pause()
+                    ##pause()
                     try:
                         x = getattr(CLIENT, commands[0])(*args)
                     except:
@@ -709,7 +759,8 @@ class MPDC(object):
                         if not self.CALL_PLAYLIST:
                             return False
                     debug(x = x)
-                    # #pause()
+                    debug(args = args)
+                    ##pause()
                     if not x:
                         debug("not x")
                         all_songs = []
@@ -732,11 +783,13 @@ class MPDC(object):
                             if x:
                                 all_songs = all_songs + x
                     debug(all_songs = all_songs)
-                    # pause()
+                    # ##pause()
                     if all_songs:
                         x = all_songs
 
                 elif 'artist' in commands and 'find' in commands:
+                    debug(commands = commands)
+                    # #pause()
                     try:
                         x = getattr(CLIENT, commands[0])(*args)
                         debug(x = x)
@@ -748,14 +801,16 @@ class MPDC(object):
                             print(make_colors("[artist] Command Errors !", 'lw', 'r'))
                             if not self.CALL_PLAYLIST:
                                 return False
+                    # #pause()
                     if not x:
                         debug("not x")
-                        #pause()
+                        ###pause()
                         try:
                             x = getattr(CLIENT, 'list')('artist')
                         except:
                             x = self.re_execute('list', ('artist'), None, host, port)
-                        # debug(x = x)
+                        debug(x = x)
+                        # #pause()
                         # print ("XXX =", x)
                         debug(len_x = len(x))
                         debug(commands_index_album_add = commands[commands.index('artist') + 1].lower())
@@ -769,8 +824,25 @@ class MPDC(object):
                                 x_find_artist.append(x1)
                                 debug(x_find_artist = x_find_artist)
                         x = x_find_artist
-                        x_find = True
                         debug(x = x)
+                        # #pause()
+                        x_find = True
+                        founds = []
+                        if use_filter:
+                            add = []
+                            for i in x:
+                                exists = False
+                                # for d in i:
+                                    # print("album = ", d.get('album'))
+                                x = list(filter(lambda k: (k.get(use_filter[0]).lower() == use_filter[1].lower() or use_filter[1].lower() in k.get(use_filter[0]).lower()), i))
+                                if x:
+                                    founds.append(x)
+
+                            debug(founds = founds)
+                            if founds:
+                                x = founds
+                        # #pause()
+                    # #pause()
                 else:
                     args = list(args)
                     if not 'any' in args:
@@ -808,7 +880,7 @@ class MPDC(object):
                             if x:
                                 all_founds += x
                     debug(all_founds = all_founds)
-                    #pause()
+                    ###pause()
                     if all_founds:
                         x = all_founds
             elif 'playlist' in commands:
@@ -882,7 +954,7 @@ class MPDC(object):
                 debug(all_numbers = all_numbers)
                 all_numbers = list(set(sorted(all_numbers)))
                 debug(all_numbers = all_numbers)
-                #pause()
+                ###pause()
                 if all_numbers:
                     try:
                         x = getattr(CLIENT, "playlistid")()
@@ -901,27 +973,33 @@ class MPDC(object):
             else:
                 try:
                     x = getattr(CLIENT, commands[0])(*args)
+                    debug(x = x)
                 except:
                     print(traceback.format_exc())
                     print(make_colors("[else] Command Errors !", 'lw', 'r'))
                     if not self.CALL_PLAYLIST:
                         return False
+            #pause()
 
             try:
                 if x:
                     debug(x = x)
+                    ##pause()
                     if 'delete' in commands or 'remove' in commands or 'del' in commands or 'rm' in commands:
                         self.command_execute("playlist")
                     elif 'find' in commands:
                         debug(commands = commands)
-                        # pause()
+                        # ##pause()
                         if 'title' in commands:
                             x = self.organizer_album_by_title(x)
+                            debug(x = x)
                         elif 'artist' in commands or 'albumartist' in commands or 'album' in commands:
                             if 'albumartist' in commands:
                                 x = self.organizer_album_by_artist(x, True)
                             else:
                                 x = self.organizer_album_by_artist(x)
+                            debug(x= x)
+                            #pause()
                         else:
                             x = self.organizer_album_by_title(x, 'file')
                             debug(x = x)
