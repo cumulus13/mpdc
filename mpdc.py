@@ -825,7 +825,7 @@ class MPDC(object):
                                 debug(x_find_artist = x_find_artist)
                         x = x_find_artist
                         debug(x = x)
-                        # #pause()
+                        # pause()
                         x_find = True
                         founds = []
                         if use_filter:
@@ -834,7 +834,16 @@ class MPDC(object):
                                 exists = False
                                 # for d in i:
                                     # print("album = ", d.get('album'))
-                                x = list(filter(lambda k: (k.get(use_filter[0]).lower() == use_filter[1].lower() or use_filter[1].lower() in k.get(use_filter[0]).lower()), i))
+                                debug(use_filter = use_filter)
+                                debug(i = i)
+
+                                if len(use_filter) == 2:
+                                    x = list(filter(lambda k: (k.get(use_filter[0]).lower() == use_filter[1].lower() or use_filter[1].lower() in k.get(use_filter[0]).lower()), i))
+                                elif len(use_filter) == 1:
+                                    x = list(filter(lambda k: (k.get('album').lower() == use_filter[0].lower() or use_filter[0].lower() in k.get('album').lower()), i)) or list(filter(lambda k: (k.get('artist').lower() == use_filter[0].lower() or use_filter[0].lower() in k.get('artist').lower()), i))
+
+                                debug(x = x)
+                                # pause()
                                 if x:
                                     founds.append(x)
 
