@@ -21,13 +21,15 @@ from pydebugger.debug import debug
 from make_colors import make_colors
 import re
 import random
+import signal
+import clipboard
 
 class MPDC(object):
     HOST = ''
     PORT = ''
     configname = os.path.join(os.path.relpath(os.path.dirname(__file__)), 'mpdc.ini')
     config = configset(configname)
-    #config.configname = configname
+    
     CLIENT = ''
     ADD = False
     FIRST = False
@@ -36,6 +38,7 @@ class MPDC(object):
     diplay_columns = ''
     stations = ''
     CLIENT = None
+    PID = os.getpid()
 
     def __init__(self, host = None, port = None, configfile = None):
         super(MPDC, self).__init__()
@@ -163,19 +166,15 @@ class MPDC(object):
 
     @classmethod
     def organizer_album_by_artist(self, results, albumartist = False):
-        # print ("results =", results[1])
         debug(results = results)
         albums = []
-        #paths = []
         album_paths = {}
         n = 0
-        #debug(results = results)
+        
         for i in results:
-            #print ("i =",i)
             debug(i = i)
-            #pause()
+            # pause()
             if isinstance(i, list):
-                # #pause()
                 for x in i:
                     album = x.get('album') or ''
                     if albumartist:
@@ -184,14 +183,11 @@ class MPDC(object):
                         artist = x.get('artist') or ''
                     disc = x.get('disc') or ''
                     file = x.get('file') or ''
-                    if file:
-                        file = os.path.dirname(x.get('file'))
+                    if file: file = os.path.dirname(x.get('file'))
                     debug(file = file)
                     date = x.get('date') or ''
-                    if albumartist:
-                        albums.append((album, artist, disc, file, date))
-                    else:
-                        albums.append((album, artist, disc, file, date))
+                    albums.append((album, artist, disc, file, date))
+
             else:
                 album = i.get('album') or ''
                 artist = i.get('artist') or ''
@@ -201,11 +197,8 @@ class MPDC(object):
                     file = os.path.dirname(i.get('file'))
                 date = i.get('date') or ''
                 albums.append((album, artist, disc, file, date))
-            #paths.append(os.path.dirname(i.get(file)))
         debug(albums = albums)
-        # pprint(albums)
-        #pause()
-
+        # pause()
         try:
             album = sorted(set(albums))
         except:
@@ -224,41 +217,52 @@ class MPDC(object):
                 print(traceback.format_exc())
 
         debug(album = album)
-        #album = albums
-        # print("album =", album)
+        # pause()
+        
         for i in album:
             file_album_path = ''
             for x in results:
+                debug(x = x)
                 if isinstance(x, list):
                     for y in x:
                         if y.get('album') == i[0]:
-                            album_paths.update(
-                                {
-                                    n: {
-                                        'album':i[0],
-                                        'path':i[3],
-                                        'artist':i[1],
-                                        'year':i[4]
+                            debug(os_path_dirname_x_get_file = os.path.dirname(y.get('file')))
+                            debug(file_album_path = file_album_path)
+                            # pause()
+                            if not os.path.dirname(y.get('file')) == file_album_path:
+                                # print("x"*100)
+                                file_album_path = os.path.dirname(y.get('file'))
+                                debug("adding")
+                                album_paths.update(
+                                    {
+                                        n: {
+                                            'album':i[0],
+                                            'path':i[3],
+                                            'artist':i[1],
+                                            'year':i[4]
+                                        }
                                     }
-                                }
-                            )
-                            # n+=1
-                            break
+                                )
+                                break
                 else:
                     if x.get('album') == i[0]:
+                        debug(os_path_dirname_x_get_file = os.path.dirname(x.get('file')))
+                        debug(file_album_path = file_album_path)
+
                         if not os.path.dirname(x.get('file')) == file_album_path:
+                            debug('adding')
                             file_album_path = os.path.dirname(x.get('file'))
                             n+=1
-                        album_paths.update(
-                            {
-                            n: {
-                                'album':i[0],
-                                'artist':i[1],
-                                # 'path':os.path.dirname(x.get('file')),
-                                'path':i[3],
-                                'year':i[4]
-                            }
-                        })
+                            album_paths.update(
+                                {
+                                n: {
+                                    'album':i[0],
+                                    'artist':i[1],
+                                    # 'path':os.path.dirname(x.get('file')),
+                                    'path':i[3],
+                                    'year':i[4]
+                                }
+                            })
 
             #break
             n+=1
@@ -338,15 +342,13 @@ class MPDC(object):
                         debug(x_get = x.get(int(q)))
                         path = x.get(int(q)).get('path')
                         debug(path=path)
-                        #pause()
+                        # pause()
                         # print ("path 1 =",path)
                         self.command_execute('add %s'%(path))
-                        #pause()
+                        # pause()
                     #if not multiplay:
                     #if not ADD:
                         #command_execute('play')
-        #debug(x = x)
-        #pprint(x)
         if not q:
             for i in x:
                 year = x.get(i).get('year')
@@ -451,6 +453,7 @@ class MPDC(object):
             # global ADD
             self.ADD = False
         elif q == 'x' or q == 'q' or q == 'exit' or q == 'quit':
+            os.kill(self.PID, signal.SIGTERM)
             sys.exit(1)
         elif ADD_ALL:
             for i in x:
@@ -980,6 +983,8 @@ class MPDC(object):
                             CLIENT = self.conn(host, port)
                             getattr(CLIENT, "deleteid")(x[int(nn) - 1].get('id'))
             else:
+                debug(commands = commands)
+                # pause()
                 try:
                     x = getattr(CLIENT, commands[0])(*args)
                     debug(x = x)
@@ -993,12 +998,11 @@ class MPDC(object):
             try:
                 if x:
                     debug(x = x)
-                    ##pause()
+                    # pause()
                     if 'delete' in commands or 'remove' in commands or 'del' in commands or 'rm' in commands:
                         self.command_execute("playlist")
                     elif 'find' in commands:
                         debug(commands = commands)
-                        # ##pause()
                         if 'title' in commands:
                             x = self.organizer_album_by_title(x)
                             debug(x = x)
@@ -1008,11 +1012,10 @@ class MPDC(object):
                             else:
                                 x = self.organizer_album_by_artist(x)
                             debug(x= x)
-                            #pause()
                         else:
                             x = self.organizer_album_by_title(x, 'file')
                             debug(x = x)
-                        # sys.exit()
+                        
                         self.navigator_find(x, host, port)
                     elif 'list' in commands:
                         x2 = []
@@ -1038,6 +1041,21 @@ class MPDC(object):
                 self.CALL_PLAYLIST = True
                 x = getattr(CLIENT, "playlistid")()
                 debug(x = x)
+                # clipboard.copy(str(x))
+                # pause()
+
+                pp = []
+                dd = []
+                for p in x:               
+                    if p.get('title') in pp:
+                        # x.remove(p)
+                        pp.append(dd.get('title'))
+                        getattr(CLIENT, "deleteid")(p.get('id'))
+                    else:
+                        pp.append(p.get('title'))
+                pp = []
+                if dd:
+                    x = getattr(CLIENT, "playlistid")()
                 len_x = len(x)
                 n = 1
                 for i in x:
@@ -1080,7 +1098,8 @@ class MPDC(object):
                     else:
                         return self.command_execute(qp)
                 elif qp == 'x' or qp == 'q' or qp == 'exit' or qp == 'quit':
-                    sys.exit()
+                    # sys.exit()
+                    os.kill(self.PID, signal.SIGTERM)
                 else:
                     if qp:
                         self.command_execute(qp)
@@ -1151,6 +1170,7 @@ class MPDC(object):
                     print("\n")
             else:
                 debug(commands = commands)
+                # pause()
                 x = getattr(CLIENT, commands[0])()
                 debug(x = x)
                 if x:
