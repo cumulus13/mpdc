@@ -1046,12 +1046,13 @@ class MPDC(object):
 
                 pp = []
                 dd = []
+                debug(dd = dd)
                 for p in x:               
-                    if p.get('title') in pp:
-                        # x.remove(p)
-                        pp.append(dd.get('title'))
-                        getattr(CLIENT, "deleteid")(p.get('id'))
-                    else:
+                    #if p.get('title') in pp:
+                        ## x.remove(p)
+                        #pp.append(dd.get('title'))
+                        #getattr(CLIENT, "deleteid")(p.get('id'))
+                    #else:
                         pp.append(p.get('title'))
                 pp = []
                 if dd:
