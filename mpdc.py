@@ -22,7 +22,9 @@ from make_colors import make_colors
 import re
 import random
 import signal
-import clipboard
+#import clipboard
+from distutils.version import StrictVersion # pep 386
+import prettytable as ptt # pip install prettytable
 
 class MPDC(object):
     HOST = ''
@@ -95,9 +97,8 @@ class MPDC(object):
 
     @classmethod
     def makeList(self, alist, ncols, vertically=True, file=None):
-        from distutils.version import StrictVersion # pep 386
-        import prettytable as ptt # pip install prettytable
-        import sys
+        debug(ncols = ncols)
+        debug(alist = alist)
         assert StrictVersion(ptt.__version__) >= StrictVersion('0.7') # for PrettyTable.vrules property
         L = alist
         nrows = - ((-len(L)) // ncols)
@@ -245,24 +246,28 @@ class MPDC(object):
                                 )
                                 break
                 else:
-                    if x.get('album') == i[0]:
-                        debug(os_path_dirname_x_get_file = os.path.dirname(x.get('file')))
-                        debug(file_album_path = file_album_path)
-
-                        if not os.path.dirname(x.get('file')) == file_album_path:
-                            debug('adding')
-                            file_album_path = os.path.dirname(x.get('file'))
-                            n+=1
-                            album_paths.update(
-                                {
-                                n: {
-                                    'album':i[0],
-                                    'artist':i[1],
-                                    # 'path':os.path.dirname(x.get('file')),
-                                    'path':i[3],
-                                    'year':i[4]
-                                }
-                            })
+                    if len(x) == 1 and 'album' in x:
+                        if x.get('album'):
+                            self.command_execute(['find', 'album', x.get('album')])
+                    else:
+                        if x.get('album') == i[0]:
+                            debug(os_path_dirname_x_get_file = os.path.dirname(x.get('file')))
+                            debug(file_album_path = file_album_path)
+    
+                            if not os.path.dirname(x.get('file')) == file_album_path:
+                                debug('adding')
+                                file_album_path = os.path.dirname(x.get('file'))
+                                n+=1
+                                album_paths.update(
+                                    {
+                                    n: {
+                                        'album':i[0],
+                                        'artist':i[1],
+                                        # 'path':os.path.dirname(x.get('file')),
+                                        'path':i[3],
+                                        'year':i[4]
+                                    }
+                                })
 
             #break
             n+=1
@@ -595,7 +600,7 @@ class MPDC(object):
         return make_colors(artist, 'lw', 'bl') + " - " + make_colors(album, 'lw', 'm') + "/" + make_colors(disc, 'b', 'lg') + "/" + make_colors(track, 'r', 'lw') + ". " + make_colors(os.path.splitext(title)[0], 'b', 'ly') + " [" + make_colors(os.path.splitext(title)[1][1:].upper(), 'lw', 'r') + "] [" + make_colors("ID:" + str(id), 'b', 'lc') + "]"
 
     @classmethod
-    def command_execute(self, commands, host=None, port=None):
+    def command_execute(self, commands, host=None, port=None, interactive = True):
         debug(commands = commands)
         debug(ADD = self.ADD)
         host, port = self.hostport_confirm(host, port)
@@ -709,35 +714,86 @@ class MPDC(object):
                 if ('album' in commands and 'find' in commands) or 'albumartist' in commands and 'find' in commands:
                     try:
                         x = getattr(CLIENT, commands[0])(*args)
-                    except:
+                    except Exception as e:
+                        print(traceback.format_exc())
+                        print(make_colors(f"[album] Command Errors ! [1]: {make_colors(str(e), 'lw', 'bl')}", 'lw', 'r'))
                         try:
-                            x = self.re_execute(commands, args, host = host, port = port)
-                        except:
-                            print(make_colors("[album] Command Errors !", 'lw', 'r'))
+                            x = self.re_execute(commands[0], args, host = host, port = port)
+                        except Exception as e:
+                            print(traceback.format_exc())   
+                            print(make_colors(f"[album] Command Errors ! [2]: {make_colors(str(e), 'lw', 'bl')}", 'lw', 'r'))
                             if not self.CALL_PLAYLIST:
                                 return False
                     debug(x = x)
                     # ##pause()
                     if not x:
-                        debug("not x")
-                        debug(join_commands = " ".join(commands))
-                        album_str = re.findall('find (album.*?) ', " ".join(commands))[0]
-                        debug(album_str = album_str)
-                        # x = getattr(CLIENT, 'list')(album_str)
-                        # def re_execute(self, command, args = (), CLIENT = None, host = None, port = None):
-                        x = self.re_execute('list', (album_str), host = host, port = port)
-                        debug(len_x = len(x))
-                        debug(commands_index_album_add = commands[commands.index(album_str) + 1].lower())
-                        x_find_album = []
-                        for i in x:
-                            if commands[commands.index(album_str) + 1].lower() in str(i.get(album_str)).lower().strip():
-                                debug(find = str(i.get(album_str)).lower().strip())
-                                debug(patten = commands[commands.index(album_str) + 1].lower())
-                                x1 = getattr(CLIENT, 'find')(album_str, i.get(album_str))
-                                debug(x1 = x1)
-                                x_find_album.append(x1)
-                                debug(x_find_album = x_find_album)
-                        x = x_find_album
+                        def finder(cat, query):
+                            debug("not x")
+                            debug(join_commands = " ".join(commands))
+                            debug(commands = commands)
+                            #album_str = re.findall('find (album.*?) ', " ".join(commands))[0]
+                            #commands.remove('find')
+                            #debug(commands = commands)
+                            #commands.remove(cat)
+                            #debug(commands = commands)
+                            #album_str = " ".join(commands)
+                            #debug(album_str = album_str)
+                            # x = getattr(CLIENT, 'list')(album_str)
+                            # def re_execute(self, command, args = (), CLIENT = None, host = None, port = None):
+                            album_str = query
+                            x = self.re_execute('list', (cat, ), host = host, port = port)
+                            debug(len_x = len(x))
+                            #debug(commands_index_album_add = commands[commands.index(album_str) + 1].lower())
+                            x_find_album = []
+                            debug(x = x)
+                            for i in x:
+                                #if commands[commands.index(album_str) + 1].lower() in str(i.get(album_str)).lower().strip():
+                                if album_str.strip().lower() in str(i.get(cat)).lower().strip():
+                                    debug(find = str(i.get(cat)).lower().strip())
+                                    #debug(patten = commands[commands.index(album_str) + 1].lower())
+                                    x1 = getattr(CLIENT, 'find')(album_str, )
+                                    debug(x1 = x1)
+                                    x_find_album.append(x1)
+                                    debug(x_find_album = x_find_album)
+                            x = x_find_album
+                            debug(x_find_album = x_find_album)
+                            debug(x = x)
+                            return x
+                        
+                        if 'album' in commands and 'find' in commands:
+                            commands.remove('find')
+                            debug(commands = commands)
+                            commands.remove('album')
+                            debug(commands = commands)
+                            album_str = " ".join(commands)
+                            debug(album_str = album_str)
+                                                        
+                            x = finder('album', album_str)
+                            if not x: print(make_colors(f"Album '{make_colors(album_str, 'b', 'lc')}' NOT FOUND !", 'lw', 'r'))
+                            
+                        elif 'artist' in commands and 'find' in commands:
+                            commands.remove('find')
+                            debug(commands = commands)
+                            commands.remove('artist')
+                            debug(commands = commands)
+                            artist_str = " ".join(commands)
+                            debug(artist_str = artist_str)
+                                                        
+                            x = finder('artist', artist_str)
+                            if not x: print(make_colors(f"Artist '{make_colors(artist_str, 'b', 'lc')}' NOT FOUND !", 'lw', 'r'))
+                            
+                        elif 'albumartist' in commands and 'find' in commands:
+                            commands.remove('find')
+                            debug(commands = commands)
+                            commands.remove('albumartist')
+                            debug(commands = commands)
+                            album_artist_str = " ".join(commands)
+                            debug(album_artist_str = album_artist_str)
+                                                        
+                            x = finder('albumartist', album_artist_str)
+                            
+                            if not x: print(make_colors(f"AlbumArtist '{make_colors(album_artist_str, 'b', 'lc')}' NOT FOUND !", 'lw', 'r'))
+                            
                         x_find = True
                 elif ('title' in commands and 'find' in commands) or ('song' in commands and 'find' in commands) or ('composer' in commands and 'find' in commands):
                     debug(commands = commands)
@@ -1015,18 +1071,24 @@ class MPDC(object):
                         else:
                             x = self.organizer_album_by_title(x, 'file')
                             debug(x = x)
-                        
-                        self.navigator_find(x, host, port)
+                        if interactive:
+                            self.navigator_find(x, host, port)
                     elif 'list' in commands:
                         x2 = []
+                        debug(i = i)
                         for i in x:
                             if isinstance(i, dict):
                                 if i.get('artist'):
                                     x2.append(str(x.index(i)) + ". " + i.get('artist'))
+                                elif i.get('albums'):
+                                    x2.append(str(x.index(i)) + ". " + i.get('albums'))
                             else:
                                 x2.append(str(x.index(i)) + ". " + i)
 
-                        self.makeList(x2, n_list)
+                        #self.makeList(x2, n_list)
+                        x = self.organizer_album_by_artist(x)
+                        if interactive:
+                            self.navigator_find(x, host, port)
                     else:
                         if isinstance(x, dict):
                             for r in x:
@@ -1189,6 +1251,9 @@ class MPDC(object):
                     else:
                         print(x)
                 # print("#"*cmdw.getWidth())
+                
+        
+        return x
 
     @classmethod
     def execute(self, host=None, port=None, commands=None):
@@ -1219,8 +1284,12 @@ class MPDC(object):
         if not CLIENT:
             CLIENT = self.conn(host, port)
         host, port = self.ver_host(host, port)
-        if not args:
-            args = ()
+        debug(host = host)
+        debug(port = port)
+        debug(comman = command)
+        debug(args = args)
+        
+        if not args: args = ()
         x = None
         while 1:
             try:
